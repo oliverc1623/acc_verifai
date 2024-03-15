@@ -37,7 +37,7 @@ def announce(message):
 
 iteration = 1
 
-def create_distances_csv(d1, d2, d3, p1, p2, p3, p4):
+def create_distances_csv(name, d1, d2, d3, p1, p2, p3, p4):
     distances = {"c1_c2": [], "c2_c3": [], "c3_c0": [], "p1": [],  "p2": [],  "p3": [],  "p4": []}
     global iteration
     for i in d1:
@@ -55,7 +55,7 @@ def create_distances_csv(d1, d2, d3, p1, p2, p3, p4):
     for y in p4:
         distances['p4'].append(y[0])        
     df = pd.DataFrame.from_dict(distances)
-    df.to_csv(f"distances{iteration}.csv")
+    df.to_csv(name + f".csv")
     iteration += 1
 """
 Single-objective specification. This monitor is similar to the one above, but takes a
@@ -82,7 +82,7 @@ class distance(specification_monitor):
             distances2 = np.linalg.norm(distances2, axis=2)
 
             
-            create_distances_csv(distances0, distances1, distances2, p1, p2, p3, p4)
+            
             rho0 = np.min(distances0) - 5
             rho1 = np.min(distances1) - 5
             rho2 = np.min(distances2) - 5
@@ -96,8 +96,14 @@ class distance(specification_monitor):
             
             rho_victims = min(dist_victims)
             rho_attacker = min_distances[attacker]
-
-            return max(rho_victims, rho_attacker)
+            rho = max(rho_victims, rho_attacker)
+            if rho>0:
+                name = "distances_" + str(iteration) + "_no_cex"
+                create_distances_csv(name, distances0, distances1, distances2, p1, p2, p3, p4)
+            if rho<0:
+                name = "distances_" + str(iteration) + "_cex"
+                create_distances_csv(name, distances0, distances1, distances2, p1, p2, p3, p4)
+            return rho
             # distances = positions[:, [0], :] - positions[:,1:, :]
             # distances = np.linalg.norm(distances, axis=2)
             # rho = np.min(distances) - 5
