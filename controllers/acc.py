@@ -103,8 +103,8 @@ class AccControl():
             if self.t < self.attack_params["attack_time"]:
                 acceleration_target = self.full_control(car, leader)
             else:
-                acceleration_target = np.sign( np.sin(self.t * self.attack_params["frequency"]) - 1*self.attack_params["duty_cycle"] ) 
-                acceleration_target *= self.attack_params["amplitude_acc"] if acceleration_target > 0 else self.attack_params["amplitude_brake"]
+                # TODO: Add attack
+                pass
         else:
             acceleration_target = self.full_control(car, leader)
         

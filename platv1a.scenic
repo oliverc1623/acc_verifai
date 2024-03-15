@@ -26,6 +26,7 @@ MODEL = "vehicle.tesla.model3"
 
 ############
 # Attack params
+# TODO: tune these parameters
 ############
 amplitude_brake = VerifaiRange(0, 1)
 amplitude_acc   = VerifaiRange(0, 1)

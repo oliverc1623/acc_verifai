@@ -73,7 +73,7 @@ class distance(specification_monitor):
             p2 = positions[:, [1], :]
             p3 = positions[:, [2], :]
             p4 = positions[:, [3], :]
-            distances0 = positions[:, [0], :] - positions[:,1:, :]
+            distances0 = positions[:, [0], :] - positions[:, [1], :]
             distances1 = positions[:, [1], :] - positions[:, [2], :]
             distances2 = positions[:, [2], :] - positions[:, [3], :]
 
