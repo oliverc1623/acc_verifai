@@ -104,7 +104,8 @@ class AccControl():
                 acceleration_target = self.full_control(car, leader)
             else:
                 # TODO: Add attack
-                pass
+                acceleration_target = 0
+                # pass
         else:
             acceleration_target = self.full_control(car, leader)
         
