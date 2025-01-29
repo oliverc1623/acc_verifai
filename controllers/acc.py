@@ -19,7 +19,7 @@ class AccControl():
 
         # Initialize low level controller
         # TODO: move this outside
-        self.low_level_control = PID(K_P = 0.1, K_I = 0.1, K_D=0.005, dt=self.dt, min=-1, max=1, ie=5, int_sat=10)
+        self.low_level_control = PID(K_P = 0.06, K_I = 0.35, K_D=0.006, dt=self.dt, min=-1, max=1, ie=5, int_sat=10)
         self.speed_control = PID(K_P=0.4, K_I=0.01, dt = dt, tau=1, int_sat=20, min=-3, max=3)
         self.desired_vel = ego_speed
         # self.low_level_control = PIDLongitudinalController(K_P = 0.18, K_I = 0.08, K_D=0.0005, dt=self.dt, min=-2, max=2)
