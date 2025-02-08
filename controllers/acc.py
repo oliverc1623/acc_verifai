@@ -71,9 +71,7 @@ class AccControl():
         if leader is not None:
             states_leader = np.array([leader.position[0], leader.velocity[0]])
 
-            
-
-            
+           
             self.switch(states_leader, states_car)
         if self.mode == 0:
             acceleration_target = self.cruise_control(states_car)
@@ -103,8 +101,9 @@ class AccControl():
             if self.t < self.attack_params["attack_time"]:
                 acceleration_target = self.full_control(car, leader)
             else:
-                # TODO: Add attack
-                pass
+                acceleration_target = np.sign( np.sin(self.t * self.attack_params["frequency"]) - 1*self.attack_params["duty_cycle"] ) 
+                acceleration_target *= self.attack_params["amplitude_acc"] if acceleration_target > 0 else self.attack_params["amplitude_brake"]
+                
         else:
             acceleration_target = self.full_control(car, leader)
         
