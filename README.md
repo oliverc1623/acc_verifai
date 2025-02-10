@@ -1,15 +1,15 @@
 # Installation of VerifAI and Scenic
 
-1. Clone the [VerifAI](https://github.com/BerkeleyLearnVerify/VerifAI) repository and [Scenic](https://github.com/BerkeleyLearnVerify/Scenic).
-2. Checkout the `kesav-v/multi-objective` branch of VerifAI and the `kesav-v/multi-objective` branch of Scenic.
-3. Install `poetry` if you haven’t already done so.
-4. Run `poetry shell` from the VerifAI repo and make sure it spawns an environment with Python 3.8+.
-5. Run `poetry install`.
-6. Go to the location where `Scenic` was cloned and run `poetry install` (while in the same environment that was used for VerifAI).
-7. Any other missing packages when running the falsifier script can be installed using `pip`.
+1. Clone the [VerifAI](https://github.com/BerkeleyLearnVerify/VerifAI) repository and [Scenic](https://github.com/BerkeleyLearnVerify/Scenic) version 2.1.0.
+2. Use python 3.8, higher versions of python might produce conflicts within some of the used libraries. 
+3. Install both repositories, first Scenic then VerifAI. Go to their folders and run `python -m pip install -e` (we recommend installing everything in a virtual enviroment)
+4. Download [Carla](https://carla.org/) (versions 0.9.12-0.9.15 work) 
+5. Set the enviromental variables of carla and its wheel python file.
+6. Our experiments use `Town06` so make sure you install the additional maps for Carla.
+7. Download this repository.
 
-# Running a simulator
+# Running the experiments
 
-1. Download and install [LGSVL](https://www.svlsimulator.com/) or [Carla](https://carla.org/) and its respective Python APIs, according to your prefferences or needs.
-2. Open the desired simulator and start an API simulation
-3. Run the bash script `script.sh`, by default it runs LGSVL, but you can change the parameters of its commands from `--model lgsvl` to `--model carla`
+1. Activate the virtual environment where Scenic and VerifAI are installed.
+2. Open Carla simulator 
+3. Run the python script `falsifier.py` with `--model carla` to connect to the Carla API
