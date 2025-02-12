@@ -95,7 +95,7 @@ class distance(specification_monitor):
                     dist_victims.append(min_distances[i])
             
             rho_victims = min(dist_victims)
-            rho_attacker = min_distances[attacker]
+            rho_attacker = min_distances[attacker] * (-1)
             rho = max(rho_victims, rho_attacker)
             if rho>0:
                 name = "distances_" + str(iteration) + "_no_cex"
