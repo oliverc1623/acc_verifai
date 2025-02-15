@@ -12,4 +12,9 @@
 
 1. Activate the virtual environment where Scenic and VerifAI are installed.
 2. Open Carla simulator 
-3. Run the python script `falsifier.py` with `--model carla` to connect to the Carla API
+3. To run an experiment run the python script `falsifier.py` with parameters: `--model carla` `--path path/to/scenario` eg: `--path scenarios-ddas/persistent_attack.scenic` `--e output_name` (to name the file where the falsification table will be stored) `--route folder` (to create a new folder to save the results of your simulation
+
+# Additional notes
+
+- Take into account the variable `LEAD_TO_EGO` in the scenario to specify the setpoint distance and make sure it matches the variable self.d in the acc.py file (this will be fixed)
+- Remember to change the variable `verifaiSampleType` in each scenario, our experiments have testest `bo`(Bayesian Optimization)  and `ce` (Cross Entropy) as of Feb/2025
