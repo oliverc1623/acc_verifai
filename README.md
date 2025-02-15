@@ -16,5 +16,5 @@
 
 # Additional notes
 
-- Take into account the variable `LEAD_TO_EGO` in the scenario to specify the setpoint distance and make sure it matches the variable self.d in the acc.py file (this will be fixed)
-- Remember to change the variable `verifaiSampleType` in each scenario, our experiments have testest `bo`(Bayesian Optimization)  and `ce` (Cross Entropy) as of Feb/2025
+- Take into account the variable `LEAD_TO_EGO` in the scenario to specify the setpoint distance and make sure it matches the variable `self.d` in the acc.py file (this will be fixed)
+- Remember to change the variable `verifaiSampleType` in each scenario, our experiments have test `bo`(Bayesian Optimization)  and `ce` (Cross Entropy) as of Feb/2025
