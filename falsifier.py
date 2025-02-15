@@ -36,16 +36,17 @@ def announce(message):
     print(border)
 
 iteration = 1
+counterex = 1
+route = ""
 
 def create_distances_csv(name, d1, d2, d3, p1, p2, p3, p4):
-    distances = {"c1_c2": [], "c2_c3": [], "c3_c0": [], "p1": [],  "p2": [],  "p3": [],  "p4": []}
-    global iteration
+    distances = {"c0_c1": [], "c1_c2": [], "c2_c3": [], "p1": [],  "p2": [],  "p3": [],  "p4": []}
     for i in d1:
-        distances['c1_c2'].append(i[0])
+        distances['c0_c1'].append(i[0])
     for j in d2:
-        distances['c2_c3'].append(j[0])
+        distances['c1_c2'].append(j[0])
     for k in d3:
-        distances['c3_c0'].append(k[0])
+        distances['c2_c3'].append(k[0])
     for m in p1:
         distances['p1'].append(m[0])
     for n in p2:
@@ -56,7 +57,7 @@ def create_distances_csv(name, d1, d2, d3, p1, p2, p3, p4):
         distances['p4'].append(y[0])        
     df = pd.DataFrame.from_dict(distances)
     df.to_csv(name + f".csv")
-    iteration += 1
+    
 """
 Single-objective specification. This monitor is similar to the one above, but takes a
 minimum over the distances from each vehicle. If the ego vehicle is less than 5 meters
@@ -66,9 +67,14 @@ away from any vehicle at any point, a counterexample is returned.
 
 class distance(specification_monitor):
     def __init__(self):
+        self.iteration = 1
+        self.counterex = 1
+        self.ego_crash = 1
+        self.route = ""
         def specification(simulation):
             positions = np.array(simulation.result.trajectory)
-
+            global route
+            self.route = route
             p1 = positions[:, [0], :]
             p2 = positions[:, [1], :]
             p3 = positions[:, [2], :]
@@ -98,11 +104,21 @@ class distance(specification_monitor):
             rho_attacker = min_distances[attacker] * (-1)
             rho = max(rho_victims, rho_attacker)
             if rho>0:
-                name = "distances_" + str(iteration) + "_no_cex"
-                create_distances_csv(name, distances0, distances1, distances2, p1, p2, p3, p4)
+                if rho_attacker <0:
+                    name = self.route+"/distances_" + str(self.iteration) + "_no_cex"
+                    create_distances_csv(name, distances0, distances1, distances2, p1, p2, p3, p4) 
+                    self.iteration += 1
+                elif rho_attacker >0:
+                    name = self.route+"/distances_" + str(self.ego_crash) + "_attacker_crash"
+                    create_distances_csv(name, distances0, distances1, distances2, p1, p2, p3, p4)
+                    self.ego_crash += 1
+                
             if rho<0:
-                name = "distances_" + str(iteration) + "_cex"
+                self.counterex
+                name = self.route+"/distances_" + str(self.counterex) + "_cex"
                 create_distances_csv(name, distances0, distances1, distances2, p1, p2, p3, p4)
+                self.counterex+=1
+             
             return rho
             # distances = positions[:, [0], :] - positions[:,1:, :]
             # distances = np.linalg.norm(distances, axis=2)
@@ -119,9 +135,13 @@ Runs all experiments in a directory.
 
 def run_experiments(path, parallel=False, model=None,
                     sampler_type=None, headless=False, num_workers=5, output_dir='outputs',
-                    experiment_name=None, map_path=None, lgsvl=False):
+                    experiment_name=None, map_path=None, lgsvl=False, routepath=""):
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
+    if not os.path.exists(routepath):
+        os.mkdir(routepath)
+    global route
+    route = routepath
     paths = []
     if os.path.isdir(path):
         for root, _, files in os.walk(path):
@@ -213,7 +233,7 @@ def run_experiment(path, parallel=False, model=None,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path', '-p', type=str, default='platv1a.scenic',
+    parser.add_argument('--path', '-p', type=str, default='scenarios/platv1a.scenic',
                         help='Path to Scenic script')
     parser.add_argument('--parallel', action='store_true')
     parser.add_argument('--num-workers', type=int, default=5,
@@ -225,7 +245,8 @@ if __name__ == '__main__':
     parser.add_argument('--model', '-m', type=str, default=None)
     parser.add_argument('--headless', action='store_true')
     parser.add_argument('--lgsvl', '-l', action='store_true')
+    parser.add_argument('--route', '-r', type=str, default=None)
     args = parser.parse_args()
     run_experiments(args.path, args.parallel,
                     model=args.model, sampler_type=args.sampler_type, headless=args.headless,
-                    num_workers=args.num_workers, experiment_name=args.experiment_name, lgsvl=args.lgsvl)
+                    num_workers=args.num_workers, experiment_name=args.experiment_name, lgsvl=args.lgsvl,routepath=args.route)
