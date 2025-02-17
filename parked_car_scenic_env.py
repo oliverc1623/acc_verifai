@@ -6,8 +6,6 @@ import scenic
 from simulator import NewtonianSimulator
 from scenic.domains.driving.actions import SetSteerAction, SetThrottleAction
 from scenic.domains.driving.roads import Network
-from scenic.core.regions import toPolygon
-from shapely.geometry import LineString
 
 # %%
 network = Network.fromFile('maps/Town01.xodr')
@@ -19,34 +17,27 @@ scenario = scenic.scenarioFromFile(
 scene, _ = scenario.generate()
 simulator = NewtonianSimulator(network=network, render=True)
 simulation = simulator.createSimulation(scene, verbosity=0)
-simulation.lane_centerlines
 
 # %%
-for road in network.roads:  # loop over main roads
-    for lane in road.lanes:
-        # Store the lane boundaries and centerline.
-        left_poly = toPolygon(lane.leftEdge)
-        right_poly = toPolygon(lane.rightEdge)
-        center_line = lane.centerline  # Assume this is a polyline or region.
-        if left_poly and right_poly:
-            line = LineString(list(left_poly.coords) + list(right_poly.coords))
-            print(line)
+img = scene.show()
 
 # %%
-SetThrottleAction(1.0).applyTo(scene.objects[0], simulator)
+
 simulation.step()
-simulation.objects[0].position
 scene.show(zoom=0.5)
 print(simulation.compute_lane_reward())
+print(f"ego position: {simulation.ego.position},\nprev position: {simulation.prev_ego_position}")
+
+SetThrottleAction(1.0).applyTo(scene.objects[0], simulator)
+SetSteerAction(-1.0).applyTo(scene.objects[0], simulator)
 
 # %% Gymnasium environment
 
 class ScenicGymEnv(gym.Env):
-    def __init__(self, scene_file: str, max_steps=50, lane_center_y=0.0, timestep=0.1, render=False):
+    def __init__(self, scene_file: str, max_steps=100, timestep=0.1, render=False):
         super().__init__()
         self.scene_file = scene_file
         self.max_steps = max_steps
-        self.lane_center_y = lane_center_y
         self.timestep = timestep
         self.render_mode = render
         self.current_step = 0
@@ -96,20 +87,18 @@ class ScenicGymEnv(gym.Env):
         self.current_step += 1
         observation = np.array([ego.position.x, ego.position.y, ego.heading], dtype=np.float32)
         trunacted = self.current_step >= self.max_steps
-        reward = self._calculate_reward(observation)
-        terminated = reward < -20.0
+        reward = self.simulation.compute_lane_reward()
+        terminated = reward == -1
         return observation, reward, terminated, trunacted, {}
-
-
-    def _calculate_reward(self, observation):
-        lateral_error = (observation[1] - self.lane_center_y)**2
-        return -lateral_error
     
+    def render(self):
+        scene.show()
+
     def close(self):
         pass
     
 # %%
-env = ScenicGymEnv("../Scenic-2.1.0/examples/gta/badlyParkedCar2.scenic", render=True)
+env = ScenicGymEnv("car.scenic", render=False)
 
 # %%
 obs, _ = env.reset()
@@ -121,3 +110,5 @@ for i in range(10):
     done = terminated or truncated
     print(f"Step {env.current_step}: Observation: {obs}, Reward: {reward}")
 env.close()
+
+# %%
