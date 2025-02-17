@@ -12,7 +12,7 @@ from scenic.core.geometry import allChains
 from scenic.core.regions import toPolygon
 from scenic.core.vectors import Vector
 from scenic.domains.driving.controllers import PIDLongitudinalController, PIDLateralController
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString
 
 
 import shapely
@@ -60,6 +60,7 @@ class NewtonianSimulation(DrivingSimulation):
         self.ego = self.objects[0]
         self.lane_centerlines = []   # List[LineString]
         self.lane_boundaries = []    # List[Polygon] or LineString, as needed
+        self.prev_ego_position = (self.ego.position[0], self.ego.position[1])
 
         # Set actor's initial speed
         for obj in self.objects:
@@ -120,34 +121,34 @@ class NewtonianSimulation(DrivingSimulation):
                 # Store the lane boundaries and centerline.
                 left_poly = toPolygon(lane.leftEdge)
                 right_poly = toPolygon(lane.rightEdge)
-                # center_line = lane.centerline  # Assume this is a polyline or region.
+                center_line = lane.centerline
                 # Convert center_line to a Shapely LineString.
                 if left_poly and right_poly:
                     # For reward computation, we assume the centerline is roughly the midline.
                     try:
-                        # Attempt to convert using its boundary points.
                         line = LineString(list(left_poly.coords) + list(right_poly.coords))
-                        self.lane_centerlines.append(line)
+                        self.lane_centerlines.append(LineString(center_line))
+                        self.lane_boundaries.append(line)
                     except Exception:
                         pass
-                addRegion(lane.leftEdge, LANE_COLOR)
-                addRegion(lane.rightEdge, LANE_COLOR)
+            addRegion(lane.leftEdge, LANE_COLOR)
+            addRegion(lane.rightEdge, LANE_COLOR)
             addRegion(road, ROAD_COLOR, ROAD_WIDTH)
         for lane in self.network.lanes: # loop over all lanes, even in intersections
             addRegion(lane.centerline, CENTERLINE_COLOR)
         addRegion(self.network.intersectionRegion, ROAD_COLOR)
 
-    def compute_lane_reward(self):
+    def compute_lane_reward(self) -> int:
         """
-        Computes a reward based on deviation from the nearest lane centerline.
-        If no lane centerlines are available, falls back to a fixed lane center.
+        Returns -1 if the ego position crosses any of the left or right boundaries.
         """
-        ego_point = Point(self.ego.position)
-        print(f"ego_point: {ego_point}")
-        print(f"lane_centerlines: {self.lane_centerlines}")
-        min_dist = min(ego_point.distance(LineString(center.coords)) 
-                        for center in self.lane_centerlines)
-        return -min_dist
+        # Compute the path from the previous ego position to the current ego position
+        path = LineString([self.prev_ego_position, self.ego.position])
+        # Check if ego crosses any lane boundaries
+        for boundary, centerline in list(zip(self.lane_boundaries, self.lane_centerlines)):
+            if path.crosses(boundary) or path.crosses(centerline):
+                return -1        
+        return 0
 
     def scenicToScreenVal(self, pos):
         x, y = pos
@@ -162,6 +163,7 @@ class NewtonianSimulation(DrivingSimulation):
         return self.min_x <= x <= self.max_x and self.min_y <= y <= self.max_y
 
     def step(self):
+        old_position = (self.ego.position[0], self.ego.position[1])
         for obj in self.objects:
             current_speed = obj.velocity.norm()
             if hasattr(obj, 'hand_brake'):
@@ -193,6 +195,7 @@ class NewtonianSimulation(DrivingSimulation):
                 obj.speed = current_speed
             obj.position += obj.velocity * self.timestep
             obj.heading += obj.angularSpeed * self.timestep
+        self.prev_ego_position = old_position
         if self.render:
             self.draw_objects()
             pygame.event.pump()
