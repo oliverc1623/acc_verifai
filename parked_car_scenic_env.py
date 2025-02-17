@@ -6,6 +6,8 @@ import scenic
 from simulator import NewtonianSimulator
 from scenic.domains.driving.actions import SetSteerAction, SetThrottleAction
 from scenic.domains.driving.roads import Network
+from scenic.core.regions import toPolygon
+from shapely.geometry import LineString
 
 # %%
 network = Network.fromFile('maps/Town01.xodr')
@@ -15,14 +17,27 @@ scenario = scenic.scenarioFromFile(
     model='scenic.simulators.newtonian.driving_model'
 )
 scene, _ = scenario.generate()
-simulator = NewtonianSimulator(network=network)
+simulator = NewtonianSimulator(network=network, render=True)
 simulation = simulator.createSimulation(scene, verbosity=0)
+simulation.lane_centerlines
+
+# %%
+for road in network.roads:  # loop over main roads
+    for lane in road.lanes:
+        # Store the lane boundaries and centerline.
+        left_poly = toPolygon(lane.leftEdge)
+        right_poly = toPolygon(lane.rightEdge)
+        center_line = lane.centerline  # Assume this is a polyline or region.
+        if left_poly and right_poly:
+            line = LineString(list(left_poly.coords) + list(right_poly.coords))
+            print(line)
 
 # %%
 SetThrottleAction(1.0).applyTo(scene.objects[0], simulator)
 simulation.step()
 simulation.objects[0].position
-
+scene.show(zoom=0.5)
+print(simulation.compute_lane_reward())
 
 # %% Gymnasium environment
 
