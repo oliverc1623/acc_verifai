@@ -6,6 +6,7 @@ import scenic
 from simulator import NewtonianSimulator
 from scenic.domains.driving.actions import SetSteerAction, SetThrottleAction
 from scenic.domains.driving.roads import Network
+from stable_baselines3.common.env_checker import check_env
 
 # %%
 network = Network.fromFile('maps/Town01.xodr')
@@ -34,13 +35,14 @@ SetSteerAction(-1.0).applyTo(scene.objects[0], simulator)
 # %% Gymnasium environment
 
 class ScenicGymEnv(gym.Env):
-    def __init__(self, scene_file: str, max_steps=100, timestep=0.1, render=False):
+    def __init__(self, scene_file: str, max_steps=100, timestep=0.1, render=False, seed=1):
         super().__init__()
         self.scene_file = scene_file
         self.max_steps = max_steps
         self.timestep = timestep
         self.render_mode = render
         self.current_step = 0
+        self.seed = None
 
         # just steer for now, throttle will be constant
         self.action_space = spaces.Box(
@@ -59,9 +61,8 @@ class ScenicGymEnv(gym.Env):
         self.simulation = None
         self.scene = None
 
-    def reset(self, seed=None, options=None):
-        if seed is not None:
-                self.seed(seed)
+    def reset(self, seed:int=1):
+        self.seed = seed
 
         # Sample a new scenario from Scenic.
         scenario = scenic.scenarioFromFile(
@@ -99,6 +100,7 @@ class ScenicGymEnv(gym.Env):
     
 # %%
 env = ScenicGymEnv("car.scenic", render=False)
+check_env(env)
 
 # %%
 obs, _ = env.reset()
