@@ -7,4 +7,4 @@ param map = localPath('maps/Town01.xodr')
 
 model scenic.domains.driving.model
 
-ego = new Car
+ego = Car
