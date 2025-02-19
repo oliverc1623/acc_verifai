@@ -4,7 +4,7 @@ from collections import deque
 from controllers.pid import PID
 import copy
 class AccControl():
-    def __init__(self, id, dt, ego_speed, is_attacker, attack_params=None) -> None:
+    def __init__(self, id, dt, ego_speed, is_attacker, inter_vehicle_distance ,attack_params=None ) -> None:
         
         # self.axis = 0
 
@@ -12,7 +12,7 @@ class AccControl():
 
         self.vehicle_id = id
         self.dt = dt
-        self.d = 7 #control distance 
+        self.d = inter_vehicle_distance #control distance 
         self.is_attacker = is_attacker
         self.attack_params = attack_params
         self.t = 0

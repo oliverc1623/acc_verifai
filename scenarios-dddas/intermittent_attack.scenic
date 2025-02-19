@@ -35,8 +35,8 @@ param random_thr_br1 = VerifaiRange(0, 1)
 param random_thr_br2 = VerifaiRange(0, 1)
 
 ############
-
-LEADCAR_TO_EGO = C1_TO_C2 = C2_TO_C3 = -7
+inter_vehicle_distance = 7
+LEADCAR_TO_EGO = C1_TO_C2 = C2_TO_C3 = -inter_vehicle_distance
 
 C3_BRAKING_THRESHOLD = 6
 C4_BRAKING_THRESHOLD = 6
@@ -55,7 +55,7 @@ behavior Attacker(id, dt, ego_speed, lane):
 						'intensities': [globalParameters.random_thr_br1,globalParameters.random_thr_br2]
 						}
 
-	long_control = AccControl(id, dt, ego_speed, True, attack_params)
+	long_control = AccControl(id, dt, ego_speed, True, inter_vehicle_distance, attack_params)
 	lat_control  = LateralControl(globalParameters.time_step)
 	while True:
 		cars = [ego, c1, c2, c3]
@@ -65,7 +65,7 @@ behavior Attacker(id, dt, ego_speed, lane):
 
 #CAR4 BEHAVIOR: Follow lane, and brake after passing a threshold distance to obstacle
 behavior Follower(id, dt, ego_speed, lane):
-	long_control = AccControl(id, dt, ego_speed, False)
+	long_control = AccControl(id, dt, ego_speed, False, inter_vehicle_distance)
 	lat_control  = LateralControl(globalParameters.time_step)
 	while True:
 		cars = [ego, c1, c2, c3]

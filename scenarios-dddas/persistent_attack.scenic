@@ -32,10 +32,9 @@ param   attack_time 	=  VerifaiRange (0,   10)
 ############
 # vehicle distances are measured from the center of mass
 # so in reality the bumper to bumper is var - 4.95
-LEADCAR_TO_EGO = -7
-C1_TO_C2       = -7
-C2_TO_C3       = -7
-
+############
+inter_vehicle_distance = 7
+LEADCAR_TO_EGO = C1_TO_C2 = C2_TO_C3 = -inter_vehicle_distance
 
 ## DEFINING BEHAVIORS
 
@@ -45,7 +44,7 @@ behavior Attacker(id, dt, ego_speed, lane):
 					  'frequency': globalParameters.frequency,
 					  'attack_time': globalParameters.attack_time }
 
-	long_control = AccControl(id, dt, ego_speed, True, attack_params)
+	long_control = AccControl(id, dt, ego_speed, True, inter_vehicle_distance, attack_params)
 	lat_control  = LateralControl(globalParameters.time_step)
 	while True:
 		cars = [ego, c1, c2, c3]
@@ -55,7 +54,7 @@ behavior Attacker(id, dt, ego_speed, lane):
 
 #CAR4 BEHAVIOR: Follow lane, and brake after passing a threshold distance to obstacle
 behavior Follower(id, dt, ego_speed, lane):
-	long_control = AccControl(id, dt, ego_speed, False)
+	long_control = AccControl(id, dt, ego_speed, False, inter_vehicle_distance)
 	lat_control  = LateralControl(globalParameters.time_step)
 	while True:
 		cars = [ego, c1, c2, c3]
