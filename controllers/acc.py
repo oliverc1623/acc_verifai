@@ -1,10 +1,13 @@
 import numpy as np
 # import scenic.core.distributions import 
 from collections import deque
+
+import scipy.interpolate
 from controllers.pid import PID
 import copy
+import scipy as scipy
 class AccControl():
-    def __init__(self, id, dt, ego_speed, is_attacker, inter_vehicle_distance ,attack_params=None ) -> None:
+    def __init__(self, id, dt, ego_speed, is_attacker, inter_vehivle_disance, attack_params=None, sampling_attack=5) -> None:
         
         # self.axis = 0
 
@@ -12,14 +15,20 @@ class AccControl():
 
         self.vehicle_id = id
         self.dt = dt
-        self.d = inter_vehicle_distance #control distance 
+        self.d = inter_vehivle_disance
         self.is_attacker = is_attacker
         self.attack_params = attack_params
+
+        if is_attacker:
+            self.time = np.linspace(0, sampling_attack*len(attack_params), len(attack_params))
+            self.attack_params = attack_params
+            self.interpolator = scipy.interpolate.splrep(self.time, self.attack_params)
+
         self.t = 0
 
         # Initialize low level controller
         # TODO: move this outside
-        self.low_level_control = PID(K_P = 0.1, K_I = 0.1, K_D=0.005, dt=self.dt, min=-1, max=1, ie=5, int_sat=10)
+        self.low_level_control = PID(K_P = 0.06, K_I = 0.35, K_D=0.006, dt=self.dt, min=-1, max=1, ie=5, int_sat=10)
         self.speed_control = PID(K_P=0.4, K_I=0.01, dt = dt, tau=1, int_sat=20, min=-3, max=3)
         self.desired_vel = ego_speed
         # self.low_level_control = PIDLongitudinalController(K_P = 0.18, K_I = 0.08, K_D=0.0005, dt=self.dt, min=-2, max=2)
@@ -34,14 +43,6 @@ class AccControl():
         self.eps_vel        = 1     # Avoids zeno
         self.mode           = 0     # Mode = 0 then speed 
                                     # Mode = 1 then following
-        if self.attack_params != None:
-            if "attack_times" in self.attack_params:#["attack_times"]:
-                np_array = np.array(self.attack_params["attack_times"])
-                attack_times = np.round(np_array).astype(int)
-                self.attack_range1 = (attack_times[0], attack_times[1])
-                self.attack_range2 = (attack_times[2], attack_times[3])
-                self.intensity1 = self.attack_params["intensities"][0]
-                self.intensity2 = self.attack_params["intensities"][1]
 
     def switch(self, states_leader, states_car):
         dist = states_leader[0] - states_car[0]
@@ -79,9 +80,7 @@ class AccControl():
         if leader is not None:
             states_leader = np.array([leader.position[0], leader.velocity[0]])
 
-            
-
-            
+           
             self.switch(states_leader, states_car)
         if self.mode == 0:
             acceleration_target = self.cruise_control(states_car)
@@ -104,53 +103,15 @@ class AccControl():
             leader = cars[self.vehicle_id - 1]
         else:
             leader = None
-
-
-        
+ 
         if self.is_attacker:
-            if "attack_times" in self.attack_params:
-                print(self.attack_params["attack_times"])
-                np_array = np.array(self.attack_params["attack_times"])
-                self.attack_times = np.round(np_array).astype(int)
-                r1, r2 = self.attack_range1
-                r3, r4 = self.attack_range2
-
-                print(self.attack_times)
-                print('intensities')
-                print(self.attack_params["intensities"])
-                if self.t >= r1 and self.t <= r2:
-                    action = self.intensity1
-                    #acceleration_target = np.sign( np.sin(self.t * self.attack_params["frequency"]) - 1*self.attack_params["duty_cycle"] ) 
-                    #acceleration_target *= self.attack_params["amplitude_acc"] if acceleration_target > 0 else self.attack_params["amplitude_brake"]
-                    #velocity = car.carlaActor.get_velocity().x
-                    #print(f"velocity: {velocity}")
-                    #accM = car.carlaActor.get_acceleration().x
-                    #print(f"Acceleration: {accM}")
-                    
-                elif self.t >= r3 and self.t <= r4:
-                    action = self.intensity2
-                else:
-                    acceleration_target = self.full_control(car, leader)
-                    acceleration = car.carlaActor.get_acceleration().x
-                    action = self.acceleration_control(acceleration, acceleration_target)    
-            elif self.attack_params["attack_time"]:
-                if self.t < self.attack_params["attack_time"]:
-                    acceleration_target = self.full_control(car, leader)
-                    acceleration = car.carlaActor.get_acceleration().x
-                    action = self.acceleration_control(acceleration, acceleration_target)
-                else:
-                    action = np.sign( np.sin(self.t * self.attack_params["frequency"]))
-                    action *= self.attack_params["amplitude_acc"]
-            else:
-                acceleration_target = self.full_control(car, leader)
-                acceleration = car.carlaActor.get_acceleration().x
-                action = self.acceleration_control(acceleration, acceleration_target)    
+            #action = np.interp(self.t, self.time, self.attack_params)
+            action = scipy.interpolate.splev(self.t, self.interpolator).item()
         else:
             acceleration_target = self.full_control(car, leader)
-        
             acceleration = car.carlaActor.get_acceleration().x
-            print(f'acceleration: {acceleration}', f'acceleration_target: {acceleration_target}')
             action = self.acceleration_control(acceleration, acceleration_target)
+
         # print(f'{acceleration_target}, {dist - self.d}, {relative_speed}, {car.carlaActor.get_acceleration().x}')
 
         
@@ -164,3 +125,4 @@ class AccControl():
 
         return brake, throttle
     
+
