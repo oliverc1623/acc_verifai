@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: chang-luau-pod
+  name: chang-acc-pod
 spec:
   containers:
   - name: chang-luau
@@ -12,7 +12,7 @@ spec:
     args: 
       - |
         cd ~ && \
-        git clone https://github.com/oliverc1623/luau.git && cd luau && \
+        git clone git@github.com:oliverc1623/acc_verifai.git && cd acc_verifai && \
         chmod +x nautilus/setup.sh && ./nautilus/setup.sh && \
         sleep infinity
     volumeMounts: 
