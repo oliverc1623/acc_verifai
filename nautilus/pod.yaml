@@ -12,7 +12,7 @@ spec:
     args: 
       - |
         cd ~ && \
-        git clone git@github.com:oliverc1623/acc_verifai.git && cd acc_verifai && \
+        git clone https://github.com/oliverc1623/acc_verifai.git && cd acc_verifai && \
         chmod +x nautilus/setup.sh && ./nautilus/setup.sh && \
         sleep infinity
     volumeMounts: 
