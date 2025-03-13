@@ -1,7 +1,7 @@
 # %%
 from pathlib import Path
 
-from IPython.display import Image, clear_output
+from IPython.display import Image
 
 from metadrive.component.map.base_map import BaseMap
 from metadrive.component.map.pg_map import MapGenerateMethod
@@ -13,6 +13,7 @@ from metadrive.policy.idm_policy import IDMPolicy
 
 
 MAX_EPISODE_STEP = 180
+TEST_PLATOON = 2
 
 
 class AccTrafficManager(BaseManager):
@@ -26,9 +27,14 @@ class AccTrafficManager(BaseManager):
 
     def before_step(self) -> None:
         """Set actions for all spawned objects before each simulation step."""
-        for i, obj in self.spawned_objects.items():
+        for n, (i, obj) in enumerate(self.spawned_objects.items()):
             p = self.get_policy(i)
-            obj.before_step(p.act())  # set action
+            a = p.act()
+            if n == 1:
+                a[1] = -1.0  # set acceleration to 1.0
+            if n == TEST_PLATOON:
+                a[1] = 1.0
+            obj.before_step(a)  # set action
 
     def _setup_platoon(self) -> None:
         """Set up the platoon of vehicles for the attack scenario."""
@@ -95,27 +101,21 @@ class PlatoonEnv(MetaDriveEnv):
 
     def reward_function(self, vehicle_id: str, *args: dict, **kwargs: dict) -> tuple[float, dict]:
         """Overwrite reward function for the platoon attack scenario."""
-        r, i = super().reward_function(vehicle_id, *args, **kwargs)
-
-        # Reward function for the platoon attack scenario
-        info = {"attack_success": False, "platoon_vehicles": self.platoon_vehicles}
+        _, i = super().reward_function(vehicle_id, *args, **kwargs)
+        i["platoon_crash"] = False
         reward = 0
         ego_vehicle = self.agents[vehicle_id]
-        info["platoon_crash"] = self.platoon_vehicles
+
         # Check for collisions among platoon vehicles (exclude ego)
         for vehicle in self.platoon_vehicles:
             if vehicle.crash_vehicle:
                 reward += 1
 
-        # Optionally, penalize any collision involving the ego vehicle
-        info["ego_crash"] = ego_vehicle.crash_vehicle
+        # if attacker crash, negative reward
         if ego_vehicle.crash_vehicle:
             reward -= 1
 
-        if reward > 0:
-            info["attack_success"] = True
-
-        return reward, info
+        return reward, i
 
 
 map_config = {
@@ -143,30 +143,27 @@ config = {
 env = PlatoonEnv(config)
 
 # %%
-try:
-    env.reset()
-    for _ in range(180):
-        ob, r, d, t, info = env.step([-0.2, 1.0])
-        env.render(
-            mode="topdown",
-            window=False,
-            screen_size=(400, 400),
-            camera_position=(120, 7),
-            scaling=2,
-            screen_record=True,
-            text={
-                "ego crash": info["ego_crash"],
-                "platoon_crash": info["platoon_crash"],
-                "reward": r,
-                "attack success": info["attack_success"],
-                "Timestep": env.episode_step,
-            },
-        )
-    assert env
-    env.top_down_renderer.generate_gif()
-finally:
-    env.close()
-    clear_output()
+env.reset()
+for _ in range(180):
+    ob, r, d, t, info = env.step([-0.2, 1.0])
+    env.render(
+        mode="topdown",
+        window=False,
+        screen_size=(400, 400),
+        camera_position=(120, 7),
+        scaling=2,
+        screen_record=True,
+        text={
+            "ego crash": info["crash_vehicle"],
+            "platoon crash": info["platoon_crash"],
+            "reward": r,
+            "Timestep": env.episode_step,
+        },
+    )
+env.top_down_renderer.generate_gif()
+env.close()
+
+# %%
 Image(Path.open("demo.gif", "rb").read())
 
 # %%
