@@ -87,7 +87,7 @@ class PlatoonEnv(MetaDriveEnv):
         )
         self.platoon_vehicles = self.engine.traffic_manager.platoon_vehicles
 
-    def reset(self) -> tuple[dict, dict | any] | tuple[any, dict | any]:
+    def reset(self) -> any:
         """Reset the environment for a new episode."""
         observation = super().reset()
         self.platoon_vehicles = self.engine.traffic_manager.platoon_vehicles
