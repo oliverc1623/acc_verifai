@@ -4,7 +4,7 @@ from controllers.acc import AccControl
 from controllers.lateral_control import LateralControl
 
 
-param map = localPath('../../assets/maps/CARLA/Town06.xodr')
+param map = localPath('../maps/Town06.xodr')
 param carla_map = 'Town06'
 param time_step = 1.0/10
 # model scenic.simulators.lgsvl.model
@@ -21,7 +21,6 @@ TERMINATE_TIME = 40 / globalParameters.time_step
 CAR3_SPEED = 20
 CAR4_SPEED = 20
 LEAD_CAR_SPEED = 20
-MODEL = "vehicle.tesla.model3"
 
 
 ############
