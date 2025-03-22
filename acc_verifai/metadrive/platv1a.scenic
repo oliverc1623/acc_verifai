@@ -2,11 +2,9 @@
 # Imports
 import math
 import numpy as np
-from controllers.acc import AccControl
-from controllers.lateral_control import LateralControl
 from metadrive.policy.idm_policy import IDMPolicy
 
-param map = localPath('../../assets/maps/CARLA/Town06.xodr')
+param map = localPath('../maps/Town06.xodr')
 param carla_map = 'Town06'
 param time_step = 1.0/10
 # model scenic.simulators.lgsvl.model
@@ -54,22 +52,10 @@ LEADCAR_BRAKING_THRESHOLD = 6
 behavior CollisionAvoidance(safety_distance=10):
 	take SetBrakeAction(BRAKE_ACTION)
 
-
 #EGO BEHAVIOR: Follow lane, and brake after passing a threshold distance to the leading car
 behavior Attacker(id, dt, ego_speed, lane):
-	attack_params = {'amplitude_brake': amplitude_brake,
-						'amplitude_acc': amplitude_acc,
-						'frequency': frequency,
-						'attack_time': attack_time,
-						'duty_cycle': duty_cycle}
-
-	long_control = AccControl(id, dt, ego_speed, True, attack_params=attack_params)
-	lat_control  = LateralControl(globalParameters.time_step)
-	while True:
-		cars = [ego, c1] # c2, c3]
-		b, t = long_control.compute_control(cars)
-		s = lat_control.compute_control(self, lane)
-		take SetThrottleAction(t), SetBrakeAction(b), SetSteerAction(s)
+	# TODO: implement with RL agent actions
+	take SetThrottleAction(0), SetBrakeAction(0)
 
 # CAR4 BEHAVIOR: Follow lane, and brake after passing a threshold distance to obstacle
 behavior Follower(id, vehicle_in_front):
@@ -95,7 +81,7 @@ behavior Follower(id, vehicle_in_front):
 			throttle = 0
 			brake = min(-acceleration, 1)
 		print(f"throttle: {throttle}, brake: {brake}")
-		take SetThrottleAction(1), SetBrakeAction(0), SetSteerAction(0)
+		take SetThrottleAction(throttle), SetBrakeAction(brake), SetSteerAction(0)
 
 #PLACEMENT
 # initLane = network.roads[0].forwardLanes.lanes[0]
