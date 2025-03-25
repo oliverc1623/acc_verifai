@@ -21,6 +21,7 @@ scenario = scenic.scenarioFromFile(
 env = ScenicGymEnv(
     scenario,
     MetaDriveSimulator(sumo_map=pathlib.Path("../maps/Town06.net.xml")),
+    observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(4,5)),
     action_space=spaces.Box(low=-1, high=1, shape=(2,)),
 )
 
@@ -28,12 +29,10 @@ env = ScenicGymEnv(
 env.reset()
 
 # %%
-for _ in range(100):
-    a = env.action_space.sample()
-    env.step(np.array([1,1]))
+while True:
+    obs, reward, terminated, truncated, info = env.step(np.array([1,1]))
+    print(f"reward: {reward}")
+    if terminated or truncated:
+        env.reset()
 
 # %%
-spaces.Box(low=-1, high=1, shape=(2,)).sample()
-
-# %%
-env.action_space.sample()
