@@ -12,6 +12,8 @@ import logging
 import sys
 import time
 
+import numpy as np
+import scenic.simulators.metadrive.utils as utils
 from scenic.core.simulators import InvalidScenarioError, SimulationCreationError
 from scenic.domains.driving.actions import *
 from scenic.domains.driving.controllers import (
@@ -19,7 +21,6 @@ from scenic.domains.driving.controllers import (
     PIDLongitudinalController,
 )
 from scenic.domains.driving.simulators import DrivingSimulation, DrivingSimulator
-import scenic.simulators.metadrive.utils as utils
 
 
 class MetaDriveSimulator(DrivingSimulator):
@@ -98,7 +99,7 @@ class MetaDriveSimulation(DrivingSimulation):
         self.scenic_offset = scenic_offset
         self.sumo_map_boundary = sumo_map_boundary
         self.film_size = film_size
-        self.observation = 1
+        self.observation = []
         self.actions = dict()
         super().__init__(scene, timestep=timestep, **kwargs)
 
@@ -213,6 +214,14 @@ class MetaDriveSimulation(DrivingSimulation):
                 time.sleep(self.timestep - elapsed_time)
 
     def get_obs(self):
+        obs = []
+        for obj in self.scene.objects:
+            x = obj.x
+            y = obj.y
+            xv = obj.velocity[0]
+            yv = obj.velocity[1]
+            obs.append([x, y, xv, yv])
+        self.observation = np.array(obs)
         return self.observation
 
     def get_info(self):
