@@ -104,4 +104,4 @@ require always (distance from ego.position to c1.position) > 4.99
 terminate when ego.lane == None 
 terminate when simulation().currentTime > TERMINATE_TIME
 '''
-terminate when (distance from ego to spawnPt) > 760
+terminate when (distance from ego to c1) < 4.5
