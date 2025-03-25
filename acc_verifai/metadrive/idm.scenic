@@ -51,12 +51,6 @@ LEADCAR_BRAKING_THRESHOLD = 6
 behavior CollisionAvoidance(safety_distance=10):
 	take SetBrakeAction(BRAKE_ACTION)
 
-#EGO BEHAVIOR: Follow lane, and brake after passing a threshold distance to the leading car
-behavior Attacker(id, dt, ego_speed, lane):
-	# TODO: implement with RL agent actions
-	while True:
-		take SetThrottleAction(0), SetBrakeAction(0)
-
 # CAR4 BEHAVIOR: Follow lane, and brake after passing a threshold distance to obstacle
 behavior Follower(id, vehicle_in_front, lane):
 	a = 23.0      # Maximum acceleration
@@ -90,8 +84,7 @@ behavior Follower(id, vehicle_in_front, lane):
 spawnPt = (-100 @ -48.87)
 
 id = 0
-ego = new Car at spawnPt,
-    with behavior Attacker(id, globalParameters.time_step, EGO_SPEED-5, spawnPt),
+ego = new Car at spawnPt
 
 id = 1
 c1 = new Car at ego.position offset by (LEADCAR_TO_EGO, 0),
