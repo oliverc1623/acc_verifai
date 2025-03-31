@@ -222,11 +222,11 @@ class MetaDriveSimulation(DrivingSimulation):
             xv = obj.velocity[0]
             yv = obj.velocity[1]
             obs.append([x, y, xv, yv])
-        self.observation = np.array(obs)
+        self.observation = np.array(obs).flatten().astype(np.float32)
         return self.observation
 
     def get_info(self):
-        return None
+        return {}
     
     def get_reward(self):
         if self.result:
