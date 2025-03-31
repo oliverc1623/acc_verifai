@@ -6,33 +6,33 @@ import scenic
 from gymnasium import spaces
 from scenic.gym import ScenicGymEnv
 from scenic.simulators.metadrive import MetaDriveSimulator
+from stable_baselines3 import PPO
+from stable_baselines3.common.utils import set_random_seed
 
 
 # %%
+def main() -> None:
+    """Run RL training."""
+    set_random_seed(0)
 
-scenario = scenic.scenarioFromFile(
-    "idm.scenic",
-    model="scenic.simulators.metadrive.model",
-    mode2D=True,
-)
+    scenario = scenic.scenarioFromFile(
+        "idm.scenic",
+        model="scenic.simulators.metadrive.model",
+        mode2D=True,
+    )
 
-# %%
+    env = ScenicGymEnv(
+        scenario,
+        MetaDriveSimulator(sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False),
+        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(16,)),
+        action_space=spaces.Box(low=-1, high=1, shape=(2,)),
+    )
 
-env = ScenicGymEnv(
-    scenario,
-    MetaDriveSimulator(sumo_map=pathlib.Path("../maps/Town06.net.xml")),
-    observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(4,5)),
-    action_space=spaces.Box(low=-1, high=1, shape=(2,)),
-)
+    obs, info = env.reset()
 
-# %%
-env.reset()
+    model = PPO("MlpPolicy", env, verbose=1, n_steps=256)
+    model.learn(total_timesteps=100_000, progress_bar=True)
 
-# %%
-while True:
-    obs, reward, terminated, truncated, info = env.step(np.array([1,1]))
-    print(f"reward: {reward}")
-    if terminated or truncated:
-        env.reset()
 
-# %%
+if __name__== "__main__":
+    main()
