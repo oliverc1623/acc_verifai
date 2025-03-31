@@ -105,3 +105,5 @@ terminate when ego.lane == None
 '''
 terminate when (simulation().currentTime > TERMINATE_TIME) 
 terminate when (distance from ego to c1) < 4.5
+terminate when (distance from c1 to c2) < 4.5
+terminate when (distance from c2 to c3) < 4.5
