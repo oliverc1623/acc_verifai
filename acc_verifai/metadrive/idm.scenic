@@ -53,12 +53,12 @@ behavior CollisionAvoidance(safety_distance=10):
 
 # CAR4 BEHAVIOR: Follow lane, and brake after passing a threshold distance to obstacle
 behavior Follower(id, vehicle_in_front, lane):
-	a = 23.0      # Maximum acceleration
-	b = 1.6       # Comfortable deceleration
-	v0 = 23.0     # Desired acceleration
-	s0 = 5.0      # Minimum gap
-	T = 1.5       # Safe time headway (s)
-	delta = 4  # Acceleration exponent
+	a = 50.0      # Maximum acceleration
+	b = 0.5       # Comfortable deceleration
+	v0 = 50.0     # Desired acceleration
+	s0 = 1        # Minimum gap
+	T = 0.1       # Safe time headway (s)
+	delta = 8     # Acceleration exponent
 	dt = 0.1
 	lat_control  = LateralControl(globalParameters.time_step)
 
