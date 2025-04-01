@@ -222,43 +222,32 @@ class MetaDriveSimulation(DrivingSimulation):
             xv = obj.velocity[0]
             yv = obj.velocity[1]
             obs.append([x, y, xv, yv])
-        self.observation = np.array(obs).flatten().astype(np.float32)
+        self.observation = np.array(obs).astype(np.float32)
         return self.observation
 
     def get_info(self):
         return {}
     
     def get_reward(self):
-        if self.result:
-            positions = np.array(self.result.trajectory)
+        d_safe = 4.5
+        reward = 0
 
-            distances0 = positions[:, [0], :] - positions[:, [1], :]
-            distances1 = positions[:, [1], :] - positions[:, [2], :]
-            distances2 = positions[:, [2], :] - positions[:, [3], :]
+        distances0 = (self.scene.objects[0].x - self.scene.objects[1].x) - 4.5
+        distances1 = (self.scene.objects[1].x - self.scene.objects[2].x) - 4.5
+        distances2 = (self.scene.objects[2].x - self.scene.objects[3].x) - 4.5
 
-            distances0 = np.linalg.norm(distances0, axis=2)
-            distances1 = np.linalg.norm(distances1, axis=2)
-            distances2 = np.linalg.norm(distances2, axis=2)
-            
-            rho0 = np.min(distances0) - 4.5
-            rho1 = np.min(distances1) - 4.5
-            rho2 = np.min(distances2) - 4.5
+        # if any platoon member crashes and attacker is safe, give positive reward
+        if (distances1 < 0 or distances2 < 0) and distances0 > 0:
+            reward += 5
 
-            min_distances = [rho0, rho1, rho2]
-            attacker = 0
-            dist_victims = []
-            for i in range(3):
-                if i != attacker:
-                    dist_victims.append(min_distances[i])
-            
-            rho_victims = min(dist_victims)
-            rho_attacker = min_distances[attacker] * (-1)
-            rho = max(rho_victims, rho_attacker)
-            if rho>=0:
-                return 0
-            else:
-                return 1
-        return 0
+        # attacker safety penalty
+        if distances0 < 0:
+            reward -= 5
+
+        # dense reward
+        dense_reward = max(0.0, d_safe - distances1) + max(0.0, d_safe - distances2)
+        reward += dense_reward
+        return reward
     
     def destroy(self):
         if self.client and self.client.engine:
