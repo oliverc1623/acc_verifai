@@ -198,7 +198,7 @@ class MetaDriveSimulation(DrivingSimulation):
 
         # Special handling for the ego vehicle
         ego_obj = self.scene.objects[0]
-        self.client.step(self.actions)  # Apply action in the simulator
+        self.client.step([0, self.actions[0]]) # Apply action in the simulator
         ego_obj._reset_control()
 
         # Render the scene in 2D if needed
@@ -254,7 +254,10 @@ class MetaDriveSimulation(DrivingSimulation):
             rho_victims = min(dist_victims)
             rho_attacker = min_distances[attacker] * (-1)
             rho = max(rho_victims, rho_attacker)
-            return -rho
+            if rho>=0:
+                return 0
+            else:
+                return 1
         return 0
     
     def destroy(self):
