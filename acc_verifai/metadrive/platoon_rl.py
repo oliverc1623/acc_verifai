@@ -28,7 +28,7 @@ def main() -> None:
         scenario,
         MetaDriveSimulator(sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False),
         observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(16,)),
-        action_space=spaces.Box(low=-1, high=1, shape=(2,)),
+        action_space=spaces.Box(low=0, high=1, shape=(1,)),
     )
     env = Monitor(env, log_dir)
 
