@@ -22,19 +22,19 @@ def main() -> None:
         mode2D=True,
     )
 
-    log_dir="tmp/"
+    log_dir="tmp2/"
 
     env = ScenicGymEnv(
         scenario,
-        MetaDriveSimulator(sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False),
+        MetaDriveSimulator(sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False, real_time=False),
         observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(16,)),
-        action_space=spaces.Box(low=0, high=1, shape=(1,)),
+        action_space=spaces.Box(low=-1, high=1, shape=(1,)),
     )
     env = Monitor(env, log_dir)
 
     obs, info = env.reset()
 
-    model = PPO("MlpPolicy", env, verbose=1, n_steps=256)
+    model = PPO("MlpPolicy", env, verbose=1)
     model.learn(total_timesteps=100_000, progress_bar=True)
 
 
