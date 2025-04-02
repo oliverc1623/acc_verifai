@@ -239,20 +239,31 @@ class MetaDriveSimulation(DrivingSimulation):
         attacker_crashed = distances0 < 0
         platoon_crashed = distances1 < 0 or distances2 < 0
 
-        # if any platoon member crashes and attacker is safe, give positive reward
-        if platoon_crashed and not attacker_crashed:    
-            reward += 5
         # if attacker crashes, give negative reward
-        elif attacker_crashed:
+        if attacker_crashed:
+            self.info['attacker_crashed'] = True
             reward -= 5
+        # if any platoon member crashes and attacker is safe, give positive reward
+        elif platoon_crashed and not attacker_crashed:    
+            self.info['counter_example_found'] = True
+            reward += 5
+        elif not platoon_crashed and self.currentTime >= self.maxSteps:
+            self.info["timout"] = True
+            reward -= 5
+        else:
+            # Normal case, no crashes, just distance based reward
+            self.info['attacker_crashed'] = False
+            self.info['counter_example_found'] = False
+            self.info['distances'] = {
+                "distances0": distances0,
+                "distances1": distances1,
+                "distances2": distances2
+            }
+            self.info["timeout"] = False
 
         # reward shaping (dense signal)
-        dense_reward = 0.5*max(0.0, d_safe - distances1) + 0.5*max(0.0, d_safe - distances2) - 0.5*max(0.0, d_safe - distances0)
+        dense_reward = 0.5 * max(0.0, d_safe - distances1) + 0.5 * max(0.0, d_safe - distances2) - max(0.0, d_safe - distances0)
         reward += dense_reward
-
-        # if platoon is not crashed and timeout, give negative reward
-        if not platoon_crashed and self.currentTime >= self.maxSteps:
-            reward -= 5
 
         return reward
     
