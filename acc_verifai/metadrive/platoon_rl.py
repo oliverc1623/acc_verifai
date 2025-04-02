@@ -29,12 +29,13 @@ def main() -> None:
         MetaDriveSimulator(sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False, real_time=False),
         observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(4,4)),
         action_space=spaces.Box(low=-1, high=1, shape=(1,)),
+        max_steps=300,
     )
     env = Monitor(env, log_dir)
 
     model = PPO("MlpPolicy", env, verbose=1)
-    model.learn(total_timesteps=500_000, progress_bar=True)
-    model.save("ppo_idm_attacker")
+    model.learn(total_timesteps=100_000, progress_bar=True)
+    model.save("ppo_idm_attacker2")
 
 if __name__== "__main__":
     main()
