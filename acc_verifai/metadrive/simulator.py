@@ -236,17 +236,24 @@ class MetaDriveSimulation(DrivingSimulation):
         distances1 = (self.scene.objects[1].x - self.scene.objects[2].x) - 4.5
         distances2 = (self.scene.objects[2].x - self.scene.objects[3].x) - 4.5
 
-        # if any platoon member crashes and attacker is safe, give positive reward
-        if (distances1 < 0 or distances2 < 0) and distances0 > 0:
-            reward += 5
+        attacker_crashed = distances0 < 0
+        platoon_crashed = distances1 < 0 or distances2 < 0
 
-        # attacker safety penalty
-        if distances0 < 0:
+        # if any platoon member crashes and attacker is safe, give positive reward
+        if platoon_crashed and not attacker_crashed:    
+            reward += 5
+        # if attacker crashes, give negative reward
+        elif attacker_crashed:
             reward -= 5
 
-        # dense reward
-        dense_reward = max(0.0, d_safe - distances1) + max(0.0, d_safe - distances2)
+        # reward shaping (dense signal)
+        dense_reward = 0.5*max(0.0, d_safe - distances1) + 0.5*max(0.0, d_safe - distances2) - 0.5*max(0.0, d_safe - distances0)
         reward += dense_reward
+
+        # if platoon is not crashed and timeout, give negative reward
+        if not platoon_crashed and self.currentTime >= self.maxSteps:
+            reward -= 5
+
         return reward
     
     def destroy(self):
