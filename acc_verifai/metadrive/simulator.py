@@ -248,8 +248,8 @@ class MetaDriveSimulation(DrivingSimulation):
             self.info['counter_example_found'] = True
             reward += 5
         elif not platoon_crashed and self.currentTime >= self.maxSteps:
-            self.info["timout"] = True
-            reward -= 5
+            self.info["timeout"] = True
+            reward -= 1
         else:
             # Normal case, no crashes, just distance based reward
             self.info['attacker_crashed'] = False
@@ -262,7 +262,18 @@ class MetaDriveSimulation(DrivingSimulation):
             self.info["timeout"] = False
 
         # reward shaping (dense signal)
-        dense_reward = 0.5 * max(0.0, d_safe - distances1) + 0.5 * max(0.0, d_safe - distances2) - max(0.0, d_safe - distances0)
+        c1 = -1
+        c2 = 1
+        d1_signal = c1 * distances1 / 10
+        d2_signal = c1 * distances2 / 10
+        d3_signal = c2 * distances0 / 10  # this is the distance between the attacker and the first car in the platoon
+        self.info["dense_reward_signals"] = {
+            "d1_signal": d1_signal,
+            "d2_signal": d2_signal,
+            "attacker_signal": d3_signal,
+        }
+
+        dense_reward = d1_signal + d2_signal + d3_signal
         reward += dense_reward
 
         return reward
