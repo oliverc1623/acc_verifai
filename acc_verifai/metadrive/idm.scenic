@@ -21,11 +21,11 @@ inter_vehivle_disance = Range(30, 60)
 # Max speed is 22.5 m/s = 80 kmh = 50 mph
 # normal_speed is 19.4 m/s = 70 kmh
 ACC_FACTOR = 1.0
-DEACC_FACTOR = -5
-target_speed = 19.4
-DISTANCE_WANTED = 5.0
-TIME_WANTED = 1.5
-delta = 10 # Range(4,8)      # Acceleration exponent
+DEACC_FACTOR = Range(-6, -4)
+target_speed = Range(18, 21)
+DISTANCE_WANTED = Range(1.0, 5.0)
+TIME_WANTED = Range(0.5, 2)
+delta = Range(4,12)      # Acceleration exponent
 
 # platoon placement 
 LEADCAR_TO_EGO = C1_TO_C2 = C2_TO_C3 = -inter_vehivle_disance
@@ -38,13 +38,12 @@ def not_zero(x: float, eps: float = 1e-2) -> float:
     else:
         return -eps
 
-## Follower BEHAVIOR
-behavior Follower(id, vehicle_in_front, lane):
+## Longitudinal IDM BEHAVIOR
+behavior Longitudinal_IDM(id, vehicle_in_front, lane):
 
 	lat_control  = LateralControl(globalParameters.time_step)
 
 	while True:
-		# acceleration
 		acceleration = ACC_FACTOR * (1-np.power(max(self.speed, 0) / target_speed, delta))
 		gap = (distance from self to vehicle_in_front) - self.length
 		d0 = DISTANCE_WANTED
@@ -75,15 +74,15 @@ ego = new Car at spawnPt
 
 id = 1
 c1 = new Car at ego.position offset by (LEADCAR_TO_EGO, 0),
-	with behavior Follower(id, ego, spawnPt)
+	with behavior Longitudinal_IDM(id, ego, spawnPt)
 
 id = 2
 c2 = new Car at c1.position offset by (C1_TO_C2, 0),
-	with behavior Follower(id, c1, spawnPt)
+	with behavior Longitudinal_IDM(id, c1, spawnPt)
 
 id = 3
 c3 = new Car at c2.position offset by (C2_TO_C3, 0),
-	with behavior Follower(id, c2, spawnPt)
+	with behavior Longitudinal_IDM(id, c2, spawnPt)
 
 
 '''
