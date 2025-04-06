@@ -8,66 +8,52 @@ from controllers.lateral_control import LateralControl
 param map = localPath('../maps/Town06.xodr')
 param carla_map = 'Town06'
 param time_step = 1.0/10
-# model scenic.simulators.lgsvl.model
-model scenic.simulators.carla.model
-# param render = True
+model scenic.simulators.metadrive.model
 param verifaiSamplerType = 'ce' # TODO: use scenic/random/uniform/halton sampler to train from scratch; then use ce for fine-tuning
 
-# Parameters of the scenario.
-EGO_SPEED = 20
-param EGO_BRAKING_THRESHOLD = VerifaiRange(5, 15)
-
 #CONSTANTS
-TERMINATE_TIME = 40 / globalParameters.time_step
-CAR3_SPEED = 20
-CAR4_SPEED = 20
-LEAD_CAR_SPEED = 20
+TERMINATE_TIME = 20 / globalParameters.time_step
 
-############
-# Attack params
-# TODO: tune these parameters
-############
-amplitude_brake = VerifaiRange(0, 1)
-amplitude_acc   = VerifaiRange(0, 1)
-frequency 		= VerifaiRange(0, 10)
-attack_time 	= VerifaiRange(0, 10)
-duty_cycle      = VerifaiRange(0, 1)
+# Parameters of the scenario.
+inter_vehivle_disance = Range(30, 60)
 
+## IDM Parameters (Intelligent Driver Model)
+# Max speed is 22.5 m/s = 80 kmh = 50 mph
+# normal_speed is 19.4 m/s = 70 kmh
+ACC_FACTOR = 1.0
+DEACC_FACTOR = -5
+target_speed = 19.4
+DISTANCE_WANTED = 5.0
+TIME_WANTED = 1.5
+delta = 10 # Range(4,8)      # Acceleration exponent
 
-############
-
-inter_vehivle_disance = VerifaiRange(30, 60)
-
+# platoon placement 
 LEADCAR_TO_EGO = C1_TO_C2 = C2_TO_C3 = -inter_vehivle_disance
 
-DT = 5
-C3_BRAKING_THRESHOLD = 6
-C4_BRAKING_THRESHOLD = 6
-LEADCAR_BRAKING_THRESHOLD = 6
+def not_zero(x: float, eps: float = 1e-2) -> float:
+    if abs(x) > eps:
+        return x
+    elif x > 0:
+        return eps
+    else:
+        return -eps
 
-
-## DEFINING BEHAVIORS
-#COLLISION AVOIDANCE BEHAVIOR
-behavior CollisionAvoidance(safety_distance=10):
-	take SetBrakeAction(BRAKE_ACTION)
-
-# CAR4 BEHAVIOR: Follow lane, and brake after passing a threshold distance to obstacle
+## Follower BEHAVIOR
 behavior Follower(id, vehicle_in_front, lane):
-	a = 50.0      # Maximum acceleration
-	b = 0.5       # Comfortable deceleration
-	v0 = 50.0     # Desired acceleration
-	s0 = 1        # Minimum gap
-	T = 0.1       # Safe time headway (s)
-	delta = 8     # Acceleration exponent
-	dt = 0.1
+
 	lat_control  = LateralControl(globalParameters.time_step)
 
 	while True:
 		# acceleration
+		acceleration = ACC_FACTOR * (1-np.power(max(self.speed, 0) / target_speed, delta))
 		gap = (distance from self to vehicle_in_front) - self.length
-		delta_v = self.velocity[0] - vehicle_in_front.velocity[0]
-		s_star = s0 + self.velocity[0] * T + (self.velocity[0] * delta_v) / (2 * math.sqrt(a * b))
-		acceleration = a * (1 - ((self.velocity[0]/v0)**delta) - (s_star / gap)**2)
+		d0 = DISTANCE_WANTED
+		tau = TIME_WANTED
+		ab = -ACC_FACTOR * DEACC_FACTOR
+		dv = self.speed - vehicle_in_front.speed
+		d_star = d0 + self.speed * tau + vehicle_in_front.speed * dv / (2 * np.sqrt(ab))
+		speed_diff = d_star / not_zero(gap)
+		acceleration -= ACC_FACTOR * (speed_diff**2)
 
 		if acceleration > 0:
 			throttle = min(acceleration, 1)
@@ -75,6 +61,7 @@ behavior Follower(id, vehicle_in_front, lane):
 		else:
 			throttle = 0
 			brake = min(-acceleration, 1)
+
 		s = lat_control.compute_control(self, lane)
 		take SetThrottleAction(throttle), SetBrakeAction(brake), SetSteerAction(s)
 
