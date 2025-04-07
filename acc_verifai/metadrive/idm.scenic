@@ -17,16 +17,6 @@ TERMINATE_TIME = 20 / globalParameters.time_step
 # Parameters of the scenario.
 inter_vehivle_disance = Range(30, 60)
 
-## IDM Parameters (Intelligent Driver Model)
-# Max speed is 22.5 m/s = 80 kmh = 50 mph
-# normal_speed is 19.4 m/s = 70 kmh
-ACC_FACTOR = 1.0
-DEACC_FACTOR = Range(-6, -4)
-target_speed = Range(18, 21)
-DISTANCE_WANTED = Range(1.0, 5.0)
-TIME_WANTED = Range(0.5, 2)
-delta = Range(4,12)      # Acceleration exponent
-
 # platoon placement 
 LEADCAR_TO_EGO = C1_TO_C2 = C2_TO_C3 = -inter_vehivle_disance
 
@@ -40,6 +30,15 @@ def not_zero(x: float, eps: float = 1e-2) -> float:
 
 ## Longitudinal IDM BEHAVIOR
 behavior Longitudinal_IDM(id, vehicle_in_front, lane):
+	## IDM Parameters (Intelligent Driver Model)
+	# Max speed is 22.5 m/s = 80 kmh = 50 mph
+	# normal_speed is 19.4 m/s = 70 kmh
+	ACC_FACTOR = 1.0
+	DEACC_FACTOR = Range(-4, -1)
+	target_speed = Range(20, 22.5)
+	DISTANCE_WANTED = Range(1.0, 2.0)
+	TIME_WANTED = Range(0.1, 1.5)
+	delta = Range(2, 6)      # Acceleration exponent
 
 	lat_control  = LateralControl(globalParameters.time_step)
 
@@ -89,7 +88,7 @@ c3 = new Car at c2.position offset by (C2_TO_C3, 0),
 require always (distance from ego.position to c1.position) > 4.99
 terminate when ego.lane == None 
 '''
-terminate when (simulation().currentTime > TERMINATE_TIME) 
+# terminate when (simulation().currentTime > TERMINATE_TIME) 
 terminate when (distance from ego to c1) < 4.5
 terminate when (distance from c1 to c2) < 4.5
 terminate when (distance from c2 to c3) < 4.5
