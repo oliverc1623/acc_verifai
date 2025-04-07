@@ -34,11 +34,11 @@ behavior Longitudinal_IDM(id, vehicle_in_front, lane):
 	# Max speed is 22.5 m/s = 80 kmh = 50 mph
 	# normal_speed is 19.4 m/s = 70 kmh
 	ACC_FACTOR = 1.0
-	DEACC_FACTOR = Range(-4, -1)
+	DEACC_FACTOR = Range(-6,-4)
 	target_speed = Range(20, 22.5)
 	DISTANCE_WANTED = Range(1.0, 2.0)
 	TIME_WANTED = Range(0.1, 1.5)
-	delta = Range(2, 6)      # Acceleration exponent
+	delta = 2 # Range(2, 6)      # Acceleration exponent
 
 	lat_control  = LateralControl(globalParameters.time_step)
 
