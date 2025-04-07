@@ -229,52 +229,37 @@ class MetaDriveSimulation(DrivingSimulation):
         return {}
     
     def get_reward(self):
-        d_safe = 4.5
+        gap_attacker = (self.scene.objects[0].x - self.scene.objects[1].x) - 4.5
+        gap_platoon1 = (self.scene.objects[1].x - self.scene.objects[2].x) - 4.5
+        gap_platoon2 = (self.scene.objects[2].x - self.scene.objects[3].x) - 4.5
+
+        attacker_crashed = gap_attacker < 0
+        platoon_crashed = gap_platoon1 < 0 or gap_platoon2 < 0
+
+        self.info['attacker_crashed'] = False
+        self.info['counter_example_found'] = False
+        self.info['distances'] = {
+            "gap_attacker": gap_attacker,
+            "gap_platoon1": gap_platoon1,
+            "gap_platoon2": gap_platoon2
+        }
+
+        platoon_gap_reward = -0.01 * gap_platoon1 +  -0.01 * gap_platoon2
+
+        self.info["dense_reward_signals"] = {
+            "platoon_gap_reward": platoon_gap_reward,
+        }
+
         reward = 0
-
-        distances0 = (self.scene.objects[0].x - self.scene.objects[1].x) - 4.5
-        distances1 = (self.scene.objects[1].x - self.scene.objects[2].x) - 4.5
-        distances2 = (self.scene.objects[2].x - self.scene.objects[3].x) - 4.5
-
-        attacker_crashed = distances0 < 0
-        platoon_crashed = distances1 < 0 or distances2 < 0
 
         # if attacker crashes, give negative reward
         if attacker_crashed:
             self.info['attacker_crashed'] = True
-            reward -= 5
+            reward = -10 + platoon_gap_reward
         # if any platoon member crashes and attacker is safe, give positive reward
         elif platoon_crashed and not attacker_crashed:    
             self.info['counter_example_found'] = True
-            reward += 5
-        elif not platoon_crashed and self.currentTime >= self.maxSteps:
-            self.info["timeout"] = True
-            reward -= 1
-        else:
-            # Normal case, no crashes, just distance based reward
-            self.info['attacker_crashed'] = False
-            self.info['counter_example_found'] = False
-            self.info['distances'] = {
-                "distances0": distances0,
-                "distances1": distances1,
-                "distances2": distances2
-            }
-            self.info["timeout"] = False
-
-        # reward shaping (dense signal)
-        c1 = -1
-        c2 = 1
-        d1_signal = c1 * distances1 / 10
-        d2_signal = c1 * distances2 / 10
-        d3_signal = c2 * distances0 / 10  # this is the distance between the attacker and the first car in the platoon
-        self.info["dense_reward_signals"] = {
-            "d1_signal": d1_signal,
-            "d2_signal": d2_signal,
-            "attacker_signal": d3_signal,
-        }
-
-        dense_reward = d1_signal + d2_signal + d3_signal
-        reward += dense_reward
+            reward = 10 + platoon_gap_reward
 
         return reward
     
