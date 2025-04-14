@@ -5,8 +5,8 @@ import numpy as np
 from metadrive.policy.idm_policy import IDMPolicy
 from controllers.lateral_control import LateralControl
 
-param map = localPath('../maps/Town06.xodr')
-param carla_map = 'Town06'
+param map = localPath('../maps/Town05.xodr')
+param carla_map = 'Town05'
 param time_step = 1.0/10
 model scenic.simulators.metadrive.model
 param verifaiSamplerType = 'ce' # TODO: use scenic/random/uniform/halton sampler to train from scratch; then use ce for fine-tuning
@@ -15,7 +15,7 @@ param verifaiSamplerType = 'ce' # TODO: use scenic/random/uniform/halton sampler
 TERMINATE_TIME = 20 / globalParameters.time_step
 
 # Parameters of the scenario.
-inter_vehivle_disance = Range(30, 60)
+inter_vehivle_disance = 40 # Range(30, 60)
 
 # platoon placement 
 LEADCAR_TO_EGO = C1_TO_C2 = C2_TO_C3 = -inter_vehivle_disance
@@ -40,13 +40,10 @@ def get_vehicle_ahead(id, vehicle, lane):
 	for obj in objects:
 		if not (vehicle can see obj):
 			continue
-		d = (distance from vehicle.position to obj.position)
-		if d < 0.1:
+		d = abs(vehicle.position.x - obj.position.x) # (distance from vehicle.position to obj.position)
+		if vehicle == obj or d < 0.1:
 			continue
-		inter = network.intersectionAt(vehicle)
-		if inter and inter != network.intersectionAt(obj):
-			continue
-		if not inter and lane != network.laneAt(obj):
+		if lane != obj.lane:
 			continue
 		if d < minDistance:
 			minDistance = d
@@ -81,10 +78,13 @@ def get_vehicle_behind(id, vehicle, lane):
 def get_adjacent_lane(vehicle, current_lane, direction):
 	"""Get the adjacent lane in the specified direction (left or right) from the current lane."""
 	lane_section = current_lane.sectionAt(vehicle.position)
-	if direction == "left":
-		return lane_section.laneToLeft.lane
-	elif direction == "right":
-		return lane_section.laneToRight.lane
+	print(lane_section)
+	left_lane = lane_section.laneToLeft.lane
+	right_lane = lane_section.laneToRight.lane
+	if direction == "left" and left_lane:
+		return left_lane
+	elif direction == "right" and right_lane:
+		return right_lane
 	else:
 		raise ValueError("Direction must be 'left' or 'right'.")
 
@@ -113,7 +113,7 @@ def idm_acc(agent, vehicle_in_front):
 	# IDM params
 	ACC_FACTOR = 1.0
 	DEACC_FACTOR = -4 # Range(-6,-4)
-	target_speed = 22 # Range(20, 22.5)
+	target_speed = 15 # Range(20, 22.5)
 	DISTANCE_WANTED = 4.5 # Range(1.0, 2.0)
 	TIME_WANTED = 1.5 # Range(0.1, 1.5)
 	delta = 2 # Range(2, 6)      # Acceleration exponent
@@ -161,6 +161,10 @@ behavior IDM_MOBIL(id, target_speed=12, politeness=0.3, acceleration_threshold=0
 		vehicle_front = get_vehicle_ahead(id, self, current_lane)
 		vehicle_behind = get_vehicle_behind(id, self, current_lane)
 
+		if id == 3 and vehicle_front:
+			print("ego:", self.position, "vehicle_front:", vehicle_front.position)
+			print(f"current lane: {current_lane.uid}, ego lane: {self.lane.uid}, vehicle_front lane: {vehicle_front.lane.uid}")
+
 		throttle, brake = idm_acc(self, vehicle_front)
 
 		if target_lane_for_change:
@@ -176,22 +180,22 @@ behavior IDM_MOBIL(id, target_speed=12, politeness=0.3, acceleration_threshold=0
 		past_steer_angle = current_steer_angle
 
 #PLACEMENT
-spawnPt = (400 @ -48.87)
+spawnPt = (-50 @ -205)
 
 id = 0
-ego = new Car at spawnPt # IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
+ego = new Car at spawnPt, with behavior FollowLaneBehavior() # IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
 
 id = 1
 c1 = new Car at ego.position offset by (LEADCAR_TO_EGO, 0),
-	with behavior IDM_MOBIL(id, target_speed=22) #IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
+	with behavior IDM_MOBIL(id, target_speed=15) #IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
 
 id = 2
 c2 = new Car at c1.position offset by (C1_TO_C2, 0),
-	with behavior IDM_MOBIL(id, target_speed=22) #IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
+	with behavior IDM_MOBIL(id, target_speed=15) #IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
 
 id = 3
 c3 = new Car at c2.position offset by (C2_TO_C3, 0),
-	with behavior IDM_MOBIL(id, target_speed=22)
+	with behavior IDM_MOBIL(id, target_speed=15)
 
 
 '''
