@@ -28,7 +28,7 @@ def not_zero(x: float, eps: float = 1e-2) -> float:
     else:
         return -eps
 
-def get_vehicle_ahead(id, vehicle):
+def get_vehicle_ahead(id, vehicle, lane):
 	""" Returns the closest object in front of the vehicle that is:
 	(1) visible,
 	(2) on the same lane (or intersection),
@@ -46,14 +46,14 @@ def get_vehicle_ahead(id, vehicle):
 		inter = network.intersectionAt(vehicle)
 		if inter and inter != network.intersectionAt(obj):
 			continue
-		if not inter and network.laneAt(vehicle) != network.laneAt(obj):
+		if not inter and lane != network.laneAt(obj):
 			continue
 		if d < minDistance:
 			minDistance = d
 			closest = obj
 	return closest
 
-def get_vehicle_behind(id, vehicle):
+def get_vehicle_behind(id, vehicle, lane):
 	""" Returns the closest object behind the vehicle that is:
 	(1) visible,
 	(2) on the same lane (or intersection),
@@ -71,7 +71,7 @@ def get_vehicle_behind(id, vehicle):
 		inter = network.intersectionAt(vehicle)
 		if inter and inter != network.intersectionAt(obj):
 			continue
-		if not inter and network.laneAt(vehicle) != network.laneAt(obj):
+		if not inter and lane != network.laneAt(obj):
 			continue
 		if d < minDistance:
 			minDistance = d
@@ -133,26 +133,33 @@ def idm_acc(agent, vehicle_in_front):
 	return map_acc_to_throttle_brake(acceleration)
 
 behavior IDM_MOBIL(id, target_speed=12, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4):
-	_lon_controller, _lat_controller = simulation().getLaneFollowingControllers(self)
+	_lon_controller_follow, _lat_controller_follow = simulation().getLaneFollowingControllers(self)
 	past_steer_angle = 0
+	current_lane = self.lane
+	current_centerline = current_lane.centerline
 
 	while True:	
-		# --- MOBIL: Lane Change Evaluation ---
+		# Lateral: MOBIL
 		best_change_advantage = -float('inf')
 		target_lane_for_change = None
 
-		current_lane = self.lane
-		if id == 1:
-			print(f"current_lane.uid: {current_lane.uid}")
-			for direction in ["left", "right"]:
-				adjacent_lane = get_adjacent_lane(self, current_lane, direction)
-				print(f"direction: {direction}, adjacent lane: {adjacent_lane.uid}")
+		# for direction in ["left", "right"]:
+		# 	adjacent_lane = get_adjacent_lane(self, current_lane, direction)
+		# 	if adjacent_lane is None or adjacent_lane == current_lane:
+		# 		continue
 
+		# 	# find relevant vehicles for MOBIL calculation
+		# 	ego_leader = get_vehicle_ahead(id, self)
+		# 	ego_follower = get_vehicle_behind(id, self)
+		# 	adjacent_leader = get_vehicle_ahead(id, adjacent_lane)
+		# 	adjacent_follower = get_vehicle_behind(id, adjacent_lane)
+
+		current_lane = self.lane
 		current_centerline = current_lane.centerline
 		nearest_line_points = current_centerline.nearestSegmentTo(self.position)
 
-		vehicle_front = get_vehicle_ahead(id, self)
-		vehicle_behind = get_vehicle_behind(id, self)
+		vehicle_front = get_vehicle_ahead(id, self, current_lane)
+		vehicle_behind = get_vehicle_behind(id, self, current_lane)
 
 		throttle, brake = idm_acc(self, vehicle_front)
 
@@ -162,7 +169,7 @@ behavior IDM_MOBIL(id, target_speed=12, politeness=0.3, acceleration_threshold=0
 			nearest_line_points = current_centerline.nearestSegmentTo(self.position)
 			nearest_line_segment = PolylineRegion(nearest_line_points)
 			cte = nearest_line_segment.signedDistanceTo(self.position)
-			current_steer_angle = _lat_controller.run_step(cte) # Use the lane following lateral controller
+			current_steer_angle = _lat_controller_follow.run_step(cte) # Use the lane following lateral controller
 			current_steer_angle = regulateSteering(current_steer_angle, past_steer_angle)
 
 		take SetThrottleAction(throttle), SetBrakeAction(brake), SetSteerAction(current_steer_angle)
