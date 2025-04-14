@@ -53,7 +53,7 @@ def get_vehicle_ahead(vehicle):
 			closest = obj
 	return closest
 
-def get_vehicle_ahead(vehicle):
+def get_vehicle_behind(vehicle):
 	""" Returns the closest object behind the vehicle that is:
 	(1) visible,
 	(2) on the same lane (or intersection),
