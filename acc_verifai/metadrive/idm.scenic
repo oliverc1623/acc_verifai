@@ -122,7 +122,7 @@ def idm_acc(agent, vehicle_in_front):
 	if vehicle_in_front is None:
 		return map_acc_to_throttle_brake(acceleration)
 
-	gap = (distance from agent to vehicle_in_front) - agent.length
+	gap = (vehicle_in_front.position.x - agent.position.x) - agent.length
 	d0 = DISTANCE_WANTED
 	tau = TIME_WANTED
 	ab = -ACC_FACTOR * DEACC_FACTOR
@@ -149,10 +149,10 @@ behavior IDM_MOBIL(id, target_speed=12, politeness=0.3, acceleration_threshold=0
 		# 		continue
 
 		# 	# find relevant vehicles for MOBIL calculation
-		# 	ego_leader = get_vehicle_ahead(id, self)
-		# 	ego_follower = get_vehicle_behind(id, self)
-		# 	adjacent_leader = get_vehicle_ahead(id, adjacent_lane)
-		# 	adjacent_follower = get_vehicle_behind(id, adjacent_lane)
+		# 	ego_leader = get_vehicle_ahead(id, self, current_lane)
+		# 	ego_follower = get_vehicle_behind(id, self, current_lane)
+		# 	adjacent_leader = get_vehicle_ahead(id, self, adjacent_lane)
+		# 	adjacent_follower = get_vehicle_behind(id, self, adjacent_lane)
 
 		current_lane = self.lane
 		current_centerline = current_lane.centerline
