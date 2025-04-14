@@ -28,60 +28,120 @@ def not_zero(x: float, eps: float = 1e-2) -> float:
     else:
         return -eps
 
-## Longitudinal IDM BEHAVIOR
-behavior Longitudinal_IDM(id, vehicle_in_front, lane):
-	## IDM Parameters (Intelligent Driver Model)
-	# Max speed is 22.5 m/s = 80 kmh = 50 mph
-	# normal_speed is 19.4 m/s = 70 kmh
+def getVehicleAheadInLane(vehicle):
+	""" Returns the closest object in front of the vehicle that is:
+	(1) visible,
+	(2) on the same lane (or intersection),
+	within the thresholdDistance.
+	Returns the object if found, or None otherwise. """
+	closest = None
+	minDistance = float('inf')
+	objects = simulation().objects
+	for obj in objects:
+		if not (vehicle can see obj):
+			continue
+		d = (distance from vehicle.position to obj.position)
+		if d < 0.1:
+			continue
+		inter = network.intersectionAt(vehicle)
+		if inter and inter != network.intersectionAt(obj):
+			continue
+		if not inter and network.laneAt(vehicle) != network.laneAt(obj):
+			continue
+		if d < minDistance:
+			minDistance = d
+			closest = obj
+	return closest
+
+def map_acc_to_throttle_brake(acc):
+	if acc > 0:
+		throttle = min(acc, 1)
+		brake = 0
+	else:
+		throttle = 0
+		brake = min(abs(acc), 1)
+	return throttle, brake
+
+def regulateSteering(steer, past_steer, max_steer=0.8):
+	# Steering regulation: changes cannot happen abruptly, can't steer too much.
+	if steer > past_steer + 0.1:
+		steer = past_steer + 0.1
+	elif steer < past_steer - 0.1:
+		steer = past_steer - 0.1
+	if steer >= 0:
+		steer = min(max_steer, steer)
+	else:
+		steer = max(-max_steer, steer)
+	return steer
+
+def idm_acc(agent, vehicle_in_front):
+	# IDM params
 	ACC_FACTOR = 1.0
-	DEACC_FACTOR = Range(-6,-4)
-	target_speed = Range(20, 22.5)
-	DISTANCE_WANTED = Range(1.0, 2.0)
-	TIME_WANTED = Range(0.1, 1.5)
+	DEACC_FACTOR = -4 # Range(-6,-4)
+	target_speed = 22 # Range(20, 22.5)
+	DISTANCE_WANTED = 4.5 # Range(1.0, 2.0)
+	TIME_WANTED = 1.5 # Range(0.1, 1.5)
 	delta = 2 # Range(2, 6)      # Acceleration exponent
 
-	lat_control  = LateralControl(globalParameters.time_step)
+	acceleration = ACC_FACTOR * (1-np.power(max(agent.speed, 0) / target_speed, delta))
+	if vehicle_in_front is None:
+		return map_acc_to_throttle_brake(acceleration)
 
-	while True:
-		acceleration = ACC_FACTOR * (1-np.power(max(self.speed, 0) / target_speed, delta))
-		gap = (distance from self to vehicle_in_front) - self.length
-		d0 = DISTANCE_WANTED
-		tau = TIME_WANTED
-		ab = -ACC_FACTOR * DEACC_FACTOR
-		dv = self.speed - vehicle_in_front.speed
-		d_star = d0 + self.speed * tau + vehicle_in_front.speed * dv / (2 * np.sqrt(ab))
-		speed_diff = d_star / not_zero(gap)
-		acceleration -= ACC_FACTOR * (speed_diff**2)
+	gap = (distance from agent to vehicle_in_front) - agent.length
+	d0 = DISTANCE_WANTED
+	tau = TIME_WANTED
+	ab = -ACC_FACTOR * DEACC_FACTOR
+	dv = agent.speed - vehicle_in_front.speed
+	d_star = d0 + agent.speed * tau + vehicle_in_front.speed * dv / (2 * np.sqrt(ab))
+	speed_diff = d_star / not_zero(gap)
+	acceleration -= ACC_FACTOR * (speed_diff**2)
+	return map_acc_to_throttle_brake(acceleration)
 
-		if acceleration > 0:
-			throttle = min(acceleration, 1)
-			brake = 0
+behavior IDM_MOBIL(target_speed=12, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4):
+	_lon_controller, _lat_controller = simulation().getLaneFollowingControllers(self)
+	past_steer_angle = 0
+
+	while True:	
+		# --- MOBIL: Lane Change Evaluation ---
+		best_change_advantage = -float('inf')
+		target_lane_for_change = None
+
+		current_lane = self.lane
+		current_centerline = current_lane.centerline
+		nearest_line_points = current_centerline.nearestSegmentTo(self.position)
+
+		vehicle_in_front = getVehicleAheadInLane(self)
+		throttle, brake = idm_acc(self, vehicle_in_front)
+
+		if target_lane_for_change:
+			pass
 		else:
-			throttle = 0
-			brake = min(-acceleration, 1)
+			nearest_line_points = current_centerline.nearestSegmentTo(self.position)
+			nearest_line_segment = PolylineRegion(nearest_line_points)
+			cte = nearest_line_segment.signedDistanceTo(self.position)
+			current_steer_angle = _lat_controller.run_step(cte) # Use the lane following lateral controller
+			current_steer_angle = regulateSteering(current_steer_angle, past_steer_angle)
 
-		s = lat_control.compute_control(self, lane)
-		take SetThrottleAction(throttle), SetBrakeAction(brake), SetSteerAction(s)
+		take SetThrottleAction(throttle), SetBrakeAction(brake), SetSteerAction(current_steer_angle)
+		past_steer_angle = current_steer_angle
 
 #PLACEMENT
-# initLane = network.roads[13].forwardLanes.lanes[0]
-# spawnPt = initLane.centerline.pointAlongBy(0)
-spawnPt = (-100 @ -48.87)
+spawnPt = (400 @ -48.87)
 
 id = 0
-ego = new Car at spawnPt
+ego = new Car at spawnPt # IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
 
 id = 1
 c1 = new Car at ego.position offset by (LEADCAR_TO_EGO, 0),
-	with behavior Longitudinal_IDM(id, ego, spawnPt)
+	with behavior IDM_MOBIL(target_speed=22) #IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
 
 id = 2
 c2 = new Car at c1.position offset by (C1_TO_C2, 0),
-	with behavior Longitudinal_IDM(id, c1, spawnPt)
+	with behavior IDM_MOBIL(target_speed=22) #IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
 
 id = 3
 c3 = new Car at c2.position offset by (C2_TO_C3, 0),
-	with behavior Longitudinal_IDM(id, c2, spawnPt)
+	with behavior IDM_MOBIL(target_speed=22)
 
 
 '''
@@ -90,5 +150,5 @@ terminate when ego.lane == None
 '''
 # terminate when (simulation().currentTime > TERMINATE_TIME) 
 terminate when (distance from ego to c1) < 4.5
-terminate when (distance from c1 to c2) < 4.5
-terminate when (distance from c2 to c3) < 4.5
+# terminate when (distance from c1 to c2) < 4.5
+# terminate when (distance from c2 to c3) < 4.5
