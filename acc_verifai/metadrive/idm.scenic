@@ -5,8 +5,8 @@ import numpy as np
 from metadrive.policy.idm_policy import IDMPolicy
 from controllers.lateral_control import LateralControl
 
-param map = localPath('../maps/Town05.xodr')
-param carla_map = 'Town05'
+param map = localPath('../maps/Town06.xodr')
+param carla_map = 'Town06'
 param time_step = 1.0/10
 model scenic.simulators.metadrive.model
 param verifaiSamplerType = 'ce' # TODO: use scenic/random/uniform/halton sampler to train from scratch; then use ce for fine-tuning
@@ -180,10 +180,10 @@ behavior IDM_MOBIL(id, target_speed=12, politeness=0.3, acceleration_threshold=0
 		past_steer_angle = current_steer_angle
 
 #PLACEMENT
-spawnPt = (-50 @ -205)
+spawnPt = (200 @ -48.87)
 
 id = 0
-ego = new Car at spawnPt, with behavior FollowLaneBehavior() # IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
+ego = new Car at spawnPt #, with behavior FollowLaneBehavior() # IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
 
 id = 1
 c1 = new Car at ego.position offset by (LEADCAR_TO_EGO, 0),
@@ -194,7 +194,7 @@ c2 = new Car at c1.position offset by (C1_TO_C2, 0),
 	with behavior IDM_MOBIL(id, target_speed=15) #IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
 
 id = 3
-c3 = new Car at c2.position offset by (C2_TO_C3, 0),
+c3 = new Car at c2.position offset by (C2_TO_C3, 4),
 	with behavior IDM_MOBIL(id, target_speed=15)
 
 
