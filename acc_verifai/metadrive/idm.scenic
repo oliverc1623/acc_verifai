@@ -28,7 +28,7 @@ def not_zero(x: float, eps: float = 1e-2) -> float:
     else:
         return -eps
 
-def getVehicleAheadInLane(vehicle):
+def get_vehicle_ahead(vehicle):
 	""" Returns the closest object in front of the vehicle that is:
 	(1) visible,
 	(2) on the same lane (or intersection),
@@ -41,6 +41,31 @@ def getVehicleAheadInLane(vehicle):
 		if not (vehicle can see obj):
 			continue
 		d = (distance from vehicle.position to obj.position)
+		if d < 0.1:
+			continue
+		inter = network.intersectionAt(vehicle)
+		if inter and inter != network.intersectionAt(obj):
+			continue
+		if not inter and network.laneAt(vehicle) != network.laneAt(obj):
+			continue
+		if d < minDistance:
+			minDistance = d
+			closest = obj
+	return closest
+
+def get_vehicle_ahead(vehicle):
+	""" Returns the closest object behind the vehicle that is:
+	(1) visible,
+	(2) on the same lane (or intersection),
+	within the thresholdDistance.
+	Returns the object if found, or None otherwise. """
+	closest = None
+	minDistance = float('inf')
+	objects = simulation().objects
+	for obj in objects:
+		if not (vehicle can see obj):
+			continue
+		d = (distance from obj.position to vehicle.position)
 		if d < 0.1:
 			continue
 		inter = network.intersectionAt(vehicle)
