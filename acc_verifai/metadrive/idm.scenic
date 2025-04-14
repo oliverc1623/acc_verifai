@@ -28,7 +28,7 @@ def not_zero(x: float, eps: float = 1e-2) -> float:
     else:
         return -eps
 
-def get_vehicle_ahead(vehicle):
+def get_vehicle_ahead(id, vehicle):
 	""" Returns the closest object in front of the vehicle that is:
 	(1) visible,
 	(2) on the same lane (or intersection),
@@ -53,7 +53,7 @@ def get_vehicle_ahead(vehicle):
 			closest = obj
 	return closest
 
-def get_vehicle_behind(vehicle):
+def get_vehicle_behind(id, vehicle):
 	""" Returns the closest object behind the vehicle that is:
 	(1) visible,
 	(2) on the same lane (or intersection),
@@ -63,7 +63,7 @@ def get_vehicle_behind(vehicle):
 	minDistance = float('inf')
 	objects = simulation().objects
 	for obj in objects:
-		if not (vehicle can see obj):
+		if not (obj can see vehicle):
 			continue
 		d = (distance from obj.position to vehicle.position)
 		if d < 0.1:
@@ -122,7 +122,7 @@ def idm_acc(agent, vehicle_in_front):
 	acceleration -= ACC_FACTOR * (speed_diff**2)
 	return map_acc_to_throttle_brake(acceleration)
 
-behavior IDM_MOBIL(target_speed=12, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4):
+behavior IDM_MOBIL(id, target_speed=12, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4):
 	_lon_controller, _lat_controller = simulation().getLaneFollowingControllers(self)
 	past_steer_angle = 0
 
@@ -135,8 +135,10 @@ behavior IDM_MOBIL(target_speed=12, politeness=0.3, acceleration_threshold=0.2, 
 		current_centerline = current_lane.centerline
 		nearest_line_points = current_centerline.nearestSegmentTo(self.position)
 
-		vehicle_in_front = getVehicleAheadInLane(self)
-		throttle, brake = idm_acc(self, vehicle_in_front)
+		vehicle_front = get_vehicle_ahead(id, self)
+		vehicle_behind = get_vehicle_behind(id, self)
+
+		throttle, brake = idm_acc(self, vehicle_front)
 
 		if target_lane_for_change:
 			pass
@@ -158,15 +160,15 @@ ego = new Car at spawnPt # IDM_MOBIL(target_speed=22, politeness=0.3, accelerati
 
 id = 1
 c1 = new Car at ego.position offset by (LEADCAR_TO_EGO, 0),
-	with behavior IDM_MOBIL(target_speed=22) #IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
+	with behavior IDM_MOBIL(id, target_speed=22) #IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
 
 id = 2
 c2 = new Car at c1.position offset by (C1_TO_C2, 0),
-	with behavior IDM_MOBIL(target_speed=22) #IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
+	with behavior IDM_MOBIL(id, target_speed=22) #IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
 
 id = 3
 c3 = new Car at c2.position offset by (C2_TO_C3, 0),
-	with behavior IDM_MOBIL(target_speed=22)
+	with behavior IDM_MOBIL(id, target_speed=22)
 
 
 '''
