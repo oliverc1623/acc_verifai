@@ -78,6 +78,16 @@ def get_vehicle_behind(id, vehicle):
 			closest = obj
 	return closest
 
+def get_adjacent_lane(vehicle, current_lane, direction):
+	"""Get the adjacent lane in the specified direction (left or right) from the current lane."""
+	lane_section = current_lane.sectionAt(vehicle.position)
+	if direction == "left":
+		return lane_section.laneToLeft.lane
+	elif direction == "right":
+		return lane_section.laneToRight.lane
+	else:
+		raise ValueError("Direction must be 'left' or 'right'.")
+
 def map_acc_to_throttle_brake(acc):
 	if acc > 0:
 		throttle = min(acc, 1)
@@ -132,6 +142,12 @@ behavior IDM_MOBIL(id, target_speed=12, politeness=0.3, acceleration_threshold=0
 		target_lane_for_change = None
 
 		current_lane = self.lane
+		if id == 1:
+			print(f"current_lane.uid: {current_lane.uid}")
+			for direction in ["left", "right"]:
+				adjacent_lane = get_adjacent_lane(self, current_lane, direction)
+				print(f"direction: {direction}, adjacent lane: {adjacent_lane.uid}")
+
 		current_centerline = current_lane.centerline
 		nearest_line_points = current_centerline.nearestSegmentTo(self.position)
 
