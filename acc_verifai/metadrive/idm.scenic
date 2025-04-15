@@ -84,13 +84,13 @@ def get_adjacent_lane(id, vehicle, direction):
 	else:
 		raise ValueError("Direction must be 'left' or 'right'.")
 
-def map_acc_to_throttle_brake(acc):
+def map_acc_to_throttle_brake(acc, max_throttle=1, max_brake=1):
 	if acc > 0:
-		throttle = min(acc, 1)
+		throttle = min(acc, max_throttle)
 		brake = 0
 	else:
 		throttle = 0
-		brake = min(abs(acc), 1)
+		brake = min(abs(acc), max_brake)
 	return throttle, brake
 
 def regulateSteering(steer, past_steer, max_steer=0.8):
@@ -108,8 +108,8 @@ def regulateSteering(steer, past_steer, max_steer=0.8):
 def idm_acc(agent, vehicle_in_front):
 	# IDM params
 	ACC_FACTOR = 1.0
-	DEACC_FACTOR = -4 # Range(-6,-4)
-	target_speed = 15 # Range(20, 22.5)
+	DEACC_FACTOR = -2 # Range(-6,-4)
+	target_speed = 10 # Range(20, 22.5)
 	DISTANCE_WANTED = 4.5 # Range(1.0, 2.0)
 	TIME_WANTED = 1.5 # Range(0.1, 1.5)
 	delta = 2 # Range(2, 6)      # Acceleration exponent
@@ -128,14 +128,17 @@ def idm_acc(agent, vehicle_in_front):
 	acceleration -= ACC_FACTOR * (speed_diff**2)
 	return acceleration
 
-behavior IDM_MOBIL(id, target_speed=12, politeness=0.3, safe_braking_limit=1, switching_threshold = 0.1):
+behavior IDM_MOBIL(id, target_speed=10, politeness=0.25, safe_braking_limit=1, switching_threshold = 0.9):
 	_lon_controller_follow, _lat_controller_follow = simulation().getLaneFollowingControllers(self)
 	_lon_controller_change, _lat_controller_change = simulation().getLaneChangingControllers(self)
 	past_steer_angle = 0
 	current_lane = self.lane
 	current_centerline = current_lane.centerline
 
-	while True:	
+	while True:
+		current_lane = network.laneAt(self.position)
+		current_centerline = current_lane.centerline
+
 		# Lateral: MOBIL
 		best_change_advantage = -float('inf')
 		target_lane_for_change = None
@@ -177,32 +180,26 @@ behavior IDM_MOBIL(id, target_speed=12, politeness=0.3, safe_braking_limit=1, sw
 			if incentive > switching_threshold and incentive > best_change_advantage:
 				best_change_advantage = incentive
 				target_lane_for_change = adjacent_lane
-			if id == 1:
-				print(f"MOBIL: {direction} change incentive: {incentive:.2f} (Threshold: {switching_threshold})")
 
 		if target_lane_for_change:
-			print(f"MOBIL: Initiating change to lane {target_lane_for_change}")
 			change_centerline = target_lane_for_change.centerline
 			while abs(change_centerline.signedDistanceTo(self.position)) > 0.3:
-				current_speed = self.speed if self.speed is not None else 0
-				leader_during_change = get_vehicle_ahead(id, self, target_lane_for_change)
-				acceleration = idm_acc(self, leader_during_change)
+				# Lateral: Lane change
 				cte = change_centerline.signedDistanceTo(self.position)
 				current_steer_angle = _lat_controller_change.run_step(cte)
 				current_steer_angle = regulateSteering(current_steer_angle, past_steer_angle)
+				
+				# Longitudinal: throttle/brake
+				leader_during_change = get_vehicle_ahead(id, self, target_lane_for_change)
+				acceleration = idm_acc(self, leader_during_change)
 				throttle, brake = map_acc_to_throttle_brake(acceleration)
+
 				take SetThrottleAction(throttle), SetBrakeAction(brake), SetSteerAction(current_steer_angle)
 				past_steer_angle = current_steer_angle
 			current_lane = target_lane_for_change
 			current_centerline = current_lane.centerline
 		else:
-			current_lane = self.lane
-			current_centerline = current_lane.centerline
-			nearest_line_points = current_centerline.nearestSegmentTo(self.position)
-
 			vehicle_front = get_vehicle_ahead(id, self, current_lane)
-			vehicle_behind = get_vehicle_behind(id, self, current_lane)
-
 			acceleration = idm_acc(self, vehicle_front)
 			throttle, brake = map_acc_to_throttle_brake(acceleration)
 
@@ -216,29 +213,29 @@ behavior IDM_MOBIL(id, target_speed=12, politeness=0.3, safe_braking_limit=1, sw
 			past_steer_angle = current_steer_angle
 
 #PLACEMENT
-spawnPt = (200 @ -48.87)
+spawnPt = (175 @ -48.87)
 
 id = 0
-ego = new Car at spawnPt #, with behavior FollowLaneBehavior() # IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
+ego = new Car at spawnPt, with behavior FollowLaneBehavior(target_speed=5) # IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
 
 id = 1
 c1 = new Car at ego.position offset by (LEADCAR_TO_EGO, 0),
-	with behavior IDM_MOBIL(id, target_speed=15) #IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
+	with behavior IDM_MOBIL(id, target_speed=10) #IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
 
 id = 2
 c2 = new Car at c1.position offset by (C1_TO_C2, 0),
-	with behavior IDM_MOBIL(id, target_speed=15) #IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
+	with behavior IDM_MOBIL(id, target_speed=10) #IDM_MOBIL(target_speed=22, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4)
 
 id = 3
 c3 = new Car at c2.position offset by (C2_TO_C3, 4),
-	with behavior IDM_MOBIL(id, target_speed=15)
+	with behavior IDM_MOBIL(id, target_speed=10)
 
 
 '''
 require always (distance from ego.position to c1.position) > 4.99
 terminate when ego.lane == None 
 '''
-# terminate when (simulation().currentTime > TERMINATE_TIME) 
+terminate when (simulation().currentTime > TERMINATE_TIME)
 # terminate when (distance from ego to c1) < 4.5
 # terminate when (distance from c1 to c2) < 4.5
 # terminate when (distance from c2 to c3) < 4.5
