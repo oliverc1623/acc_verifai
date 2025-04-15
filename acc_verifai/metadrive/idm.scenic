@@ -116,7 +116,7 @@ def idm_acc(agent, vehicle_in_front):
 
 	acceleration = ACC_FACTOR * (1-np.power(max(agent.speed, 0) / target_speed, delta))
 	if vehicle_in_front is None:
-		return map_acc_to_throttle_brake(acceleration)
+		return acceleration
 
 	gap = (vehicle_in_front.position.x - agent.position.x) - agent.length
 	d0 = DISTANCE_WANTED
@@ -126,10 +126,11 @@ def idm_acc(agent, vehicle_in_front):
 	d_star = d0 + agent.speed * tau + vehicle_in_front.speed * dv / (2 * np.sqrt(ab))
 	speed_diff = d_star / not_zero(gap)
 	acceleration -= ACC_FACTOR * (speed_diff**2)
-	return map_acc_to_throttle_brake(acceleration)
+	return acceleration
 
-behavior IDM_MOBIL(id, target_speed=12, politeness=0.3, acceleration_threshold=0.2, safe_braking=-4):
+behavior IDM_MOBIL(id, target_speed=12, politeness=0.3, safe_braking_limit=1, switching_threshold = 0.1):
 	_lon_controller_follow, _lat_controller_follow = simulation().getLaneFollowingControllers(self)
+	_lon_controller_change, _lat_controller_change = simulation().getLaneChangingControllers(self)
 	past_steer_angle = 0
 	current_lane = self.lane
 	current_centerline = current_lane.centerline
@@ -150,26 +151,69 @@ behavior IDM_MOBIL(id, target_speed=12, politeness=0.3, acceleration_threshold=0
 			adjacent_leader = get_vehicle_ahead(id, self, adjacent_lane)
 			adjacent_follower = get_vehicle_behind(id, self, adjacent_lane)
 
-		current_lane = self.lane
-		current_centerline = current_lane.centerline
-		nearest_line_points = current_centerline.nearestSegmentTo(self.position)
+			# Is the maneuver unsafe for the new following vehicle?
+			acc_ego_old = idm_acc(self, ego_leader)
+			acc_old_follower_old = 0
+			if ego_follower:
+				acc_old_follower_old = idm_acc(ego_follower, self)
+			acc_new_follower_old = 0
+			if adjacent_follower:
+				original_leader_for_new_follower = get_vehicle_ahead(id, adjacent_follower, adjacent_lane)
+				acc_new_follower_old = idm_acc(adjacent_follower, original_leader_for_new_follower)
 
-		vehicle_front = get_vehicle_ahead(id, self, current_lane)
-		vehicle_behind = get_vehicle_behind(id, self, current_lane)
+			# Calculate hypothetical accelerations *after* the change using IDM
+			acc_ego_new = idm_acc(self, adjacent_leader)
+			acc_old_follower_new = 0
+			if ego_follower:
+				acc_old_follower_new = idm_acc(ego_follower, ego_leader)
+			acc_new_follower_new = 0
+			if adjacent_follower:
+				acc_new_follower_new = idm_acc(adjacent_follower, self)
 
-		throttle, brake = idm_acc(self, vehicle_front)
+			if adjacent_follower and acc_new_follower_new < -safe_braking_limit:
+				continue
+
+			incentive = (acc_ego_new - acc_ego_old) + politeness * ((acc_new_follower_new - acc_new_follower_old) + (acc_old_follower_new - acc_old_follower_old))
+			if incentive > switching_threshold and incentive > best_change_advantage:
+				best_change_advantage = incentive
+				target_lane_for_change = adjacent_lane
+			if id == 1:
+				print(f"MOBIL: {direction} change incentive: {incentive:.2f} (Threshold: {switching_threshold})")
 
 		if target_lane_for_change:
-			pass
+			print(f"MOBIL: Initiating change to lane {target_lane_for_change}")
+			change_centerline = target_lane_for_change.centerline
+			while abs(change_centerline.signedDistanceTo(self.position)) > 0.3:
+				current_speed = self.speed if self.speed is not None else 0
+				leader_during_change = get_vehicle_ahead(id, self, target_lane_for_change)
+				acceleration = idm_acc(self, leader_during_change)
+				cte = change_centerline.signedDistanceTo(self.position)
+				current_steer_angle = _lat_controller_change.run_step(cte)
+				current_steer_angle = regulateSteering(current_steer_angle, past_steer_angle)
+				throttle, brake = map_acc_to_throttle_brake(acceleration)
+				take SetThrottleAction(throttle), SetBrakeAction(brake), SetSteerAction(current_steer_angle)
+				past_steer_angle = current_steer_angle
+			current_lane = target_lane_for_change
+			current_centerline = current_lane.centerline
 		else:
+			current_lane = self.lane
+			current_centerline = current_lane.centerline
+			nearest_line_points = current_centerline.nearestSegmentTo(self.position)
+
+			vehicle_front = get_vehicle_ahead(id, self, current_lane)
+			vehicle_behind = get_vehicle_behind(id, self, current_lane)
+
+			acceleration = idm_acc(self, vehicle_front)
+			throttle, brake = map_acc_to_throttle_brake(acceleration)
+
 			nearest_line_points = current_centerline.nearestSegmentTo(self.position)
 			nearest_line_segment = PolylineRegion(nearest_line_points)
 			cte = nearest_line_segment.signedDistanceTo(self.position)
 			current_steer_angle = _lat_controller_follow.run_step(cte) # Use the lane following lateral controller
 			current_steer_angle = regulateSteering(current_steer_angle, past_steer_angle)
 
-		take SetThrottleAction(throttle), SetBrakeAction(brake), SetSteerAction(current_steer_angle)
-		past_steer_angle = current_steer_angle
+			take SetThrottleAction(throttle), SetBrakeAction(brake), SetSteerAction(current_steer_angle)
+			past_steer_angle = current_steer_angle
 
 #PLACEMENT
 spawnPt = (200 @ -48.87)
@@ -195,6 +239,6 @@ require always (distance from ego.position to c1.position) > 4.99
 terminate when ego.lane == None 
 '''
 # terminate when (simulation().currentTime > TERMINATE_TIME) 
-terminate when (distance from ego to c1) < 4.5
+# terminate when (distance from ego to c1) < 4.5
 # terminate when (distance from c1 to c2) < 4.5
 # terminate when (distance from c2 to c3) < 4.5
