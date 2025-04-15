@@ -62,13 +62,10 @@ def get_vehicle_behind(id, vehicle, lane):
 	for obj in objects:
 		if not (obj can see vehicle):
 			continue
-		d = (distance from obj.position to vehicle.position)
-		if d < 0.1:
+		d = abs(obj.position.x - vehicle.position.x)
+		if vehicle == obj or d < 0.1:
 			continue
-		inter = network.intersectionAt(vehicle)
-		if inter and inter != network.intersectionAt(obj):
-			continue
-		if not inter and lane != network.laneAt(obj):
+		if lane != obj.lane:
 			continue
 		if d < minDistance:
 			minDistance = d
@@ -161,9 +158,8 @@ behavior IDM_MOBIL(id, target_speed=12, politeness=0.3, acceleration_threshold=0
 		vehicle_front = get_vehicle_ahead(id, self, current_lane)
 		vehicle_behind = get_vehicle_behind(id, self, current_lane)
 
-		if id == 3 and vehicle_front:
-			print("ego:", self.position, "vehicle_front:", vehicle_front.position)
-			print(f"current lane: {current_lane.uid}, ego lane: {self.lane.uid}, vehicle_front lane: {vehicle_front.lane.uid}")
+		if id == 1 and vehicle_front and vehicle_behind:
+			print(f"ego: {self.position.x}, vehicle_front: {vehicle_front.position.x}, vehicle_behind: {vehicle_behind.position.x}")
 
 		throttle, brake = idm_acc(self, vehicle_front)
 
