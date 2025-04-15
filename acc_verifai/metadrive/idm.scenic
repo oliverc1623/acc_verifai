@@ -72,10 +72,9 @@ def get_vehicle_behind(id, vehicle, lane):
 			closest = obj
 	return closest
 
-def get_adjacent_lane(vehicle, current_lane, direction):
+def get_adjacent_lane(id, vehicle, direction):
 	"""Get the adjacent lane in the specified direction (left or right) from the current lane."""
-	lane_section = current_lane.sectionAt(vehicle.position)
-	print(lane_section)
+	lane_section = vehicle.laneSection
 	left_lane = lane_section.laneToLeft.lane
 	right_lane = lane_section.laneToRight.lane
 	if direction == "left" and left_lane:
@@ -140,16 +139,16 @@ behavior IDM_MOBIL(id, target_speed=12, politeness=0.3, acceleration_threshold=0
 		best_change_advantage = -float('inf')
 		target_lane_for_change = None
 
-		# for direction in ["left", "right"]:
-		# 	adjacent_lane = get_adjacent_lane(self, current_lane, direction)
-		# 	if adjacent_lane is None or adjacent_lane == current_lane:
-		# 		continue
+		for direction in ["left", "right"]:
+			adjacent_lane = get_adjacent_lane(id, self, direction)
+			if adjacent_lane is None or adjacent_lane == current_lane:
+				continue
 
-		# 	# find relevant vehicles for MOBIL calculation
-		# 	ego_leader = get_vehicle_ahead(id, self, current_lane)
-		# 	ego_follower = get_vehicle_behind(id, self, current_lane)
-		# 	adjacent_leader = get_vehicle_ahead(id, self, adjacent_lane)
-		# 	adjacent_follower = get_vehicle_behind(id, self, adjacent_lane)
+			# find relevant vehicles for MOBIL calculation
+			ego_leader = get_vehicle_ahead(id, self, current_lane)
+			ego_follower = get_vehicle_behind(id, self, current_lane)
+			adjacent_leader = get_vehicle_ahead(id, self, adjacent_lane)
+			adjacent_follower = get_vehicle_behind(id, self, adjacent_lane)
 
 		current_lane = self.lane
 		current_centerline = current_lane.centerline
@@ -157,9 +156,6 @@ behavior IDM_MOBIL(id, target_speed=12, politeness=0.3, acceleration_threshold=0
 
 		vehicle_front = get_vehicle_ahead(id, self, current_lane)
 		vehicle_behind = get_vehicle_behind(id, self, current_lane)
-
-		if id == 1 and vehicle_front and vehicle_behind:
-			print(f"ego: {self.position.x}, vehicle_front: {vehicle_front.position.x}, vehicle_behind: {vehicle_behind.position.x}")
 
 		throttle, brake = idm_acc(self, vehicle_front)
 
