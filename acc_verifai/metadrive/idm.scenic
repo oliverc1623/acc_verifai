@@ -12,10 +12,10 @@ model scenic.simulators.metadrive.model
 param verifaiSamplerType = 'ce' # TODO: use scenic/random/uniform/halton sampler to train from scratch; then use ce for fine-tuning
 
 #CONSTANTS
-TERMINATE_TIME = 20 / globalParameters.time_step
+TERMINATE_TIME = 40 / globalParameters.time_step
 
 # Parameters of the scenario.
-inter_vehivle_disance = 40 # Range(30, 60)
+inter_vehivle_disance = 30 # Range(30, 60)
 
 # platoon placement 
 LEADCAR_TO_EGO = C1_TO_C2 = C2_TO_C3 = -inter_vehivle_disance
@@ -110,7 +110,7 @@ def idm_acc(agent, vehicle_in_front):
 	ACC_FACTOR = 1.0
 	DEACC_FACTOR = -2 # Range(-6,-4)
 	target_speed = 10 # Range(20, 22.5)
-	DISTANCE_WANTED = 4.5 # Range(1.0, 2.0)
+	DISTANCE_WANTED = 2 # Range(1.0, 2.0)
 	TIME_WANTED = 1.5 # Range(0.1, 1.5)
 	delta = 2 # Range(2, 6)      # Acceleration exponent
 
@@ -128,7 +128,7 @@ def idm_acc(agent, vehicle_in_front):
 	acceleration -= ACC_FACTOR * (speed_diff**2)
 	return acceleration
 
-behavior IDM_MOBIL(id, target_speed=10, politeness=0.25, safe_braking_limit=1, switching_threshold = 0.9):
+behavior IDM_MOBIL(id, target_speed=10, politeness=0.25, safe_braking_limit=1, switching_threshold = 0.5):
 	_lon_controller_follow, _lat_controller_follow = simulation().getLaneFollowingControllers(self)
 	_lon_controller_change, _lat_controller_change = simulation().getLaneChangingControllers(self)
 	past_steer_angle = 0
@@ -177,7 +177,7 @@ behavior IDM_MOBIL(id, target_speed=10, politeness=0.25, safe_braking_limit=1, s
 				continue
 
 			incentive = (acc_ego_new - acc_ego_old) + politeness * ((acc_new_follower_new - acc_new_follower_old) + (acc_old_follower_new - acc_old_follower_old))
-			if incentive > switching_threshold and incentive > best_change_advantage:
+			if (incentive > switching_threshold) and (incentive > best_change_advantage):
 				best_change_advantage = incentive
 				target_lane_for_change = adjacent_lane
 
@@ -212,30 +212,34 @@ behavior IDM_MOBIL(id, target_speed=10, politeness=0.25, safe_braking_limit=1, s
 			take SetThrottleAction(throttle), SetBrakeAction(brake), SetSteerAction(current_steer_angle)
 			past_steer_angle = current_steer_angle
 
+behavior dummy_attacker():
+	while True:
+		take SetThrottleAction(0.2), SetBrakeAction(0.0), SetSteerAction(-0.3)
+
 #PLACEMENT
-spawnPt = (175 @ -48.87)
+ego_spawn_pt  = (-100 @ -51.87)
+c1_spawn_pt = (-100 @ -48.87)
 
 id = 0
-ego = new Car at spawnPt, with behavior FollowLaneBehavior(target_speed=5)
+ego = new Car at ego_spawn_pt, with behavior dummy_attacker() # FollowLaneBehavior(target_speed=5), with velocity (20, 0)
 
 id = 1
-c1 = new Car at ego.position offset by (LEADCAR_TO_EGO, 0),
-	with behavior IDM_MOBIL(id, target_speed=10) # TODO: double check with LaneChangeBehavior
+c1 = new Car at c1_spawn_pt offset by (LEADCAR_TO_EGO, 0),
+	with behavior IDM_MOBIL(id, target_speed=10, politeness=0.1, safe_braking_limit=3, switching_threshold = 1), with velocity (20, 0) # TODO: double check with LaneChangeBehavior
 
 id = 2
 c2 = new Car at c1.position offset by (C1_TO_C2, 0),
-	with behavior IDM_MOBIL(id, target_speed=10)
+	with behavior IDM_MOBIL(id, target_speed=10, politeness=0.1, safe_braking_limit=3, switching_threshold = 1), with velocity (20, 0)
 
 id = 3
 c3 = new Car at c2.position offset by (C2_TO_C3, 4),
-	with behavior IDM_MOBIL(id, target_speed=10)
-
+	with behavior IDM_MOBIL(id, target_speed=10, politeness=0.1, safe_braking_limit=3, switching_threshold = 1), with velocity (20, 0)
 
 '''
 require always (distance from ego.position to c1.position) > 4.99
 terminate when ego.lane == None 
 '''
-terminate when (simulation().currentTime > TERMINATE_TIME)
+# terminate when (simulation().currentTime > TERMINATE_TIME)
 # terminate when (distance from ego to c1) < 4.5
 # terminate when (distance from c1 to c2) < 4.5
 # terminate when (distance from c2 to c3) < 4.5
