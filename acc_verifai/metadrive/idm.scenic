@@ -214,7 +214,7 @@ ego_spawn_pt  = (100 @ -150)
 c1_spawn_pt = (100 @ -147)
 
 id = 0
-ego = new Car at ego_spawn_pt, with behavior FollowLaneBehavior(target_speed=5) #, with behavior dummy_attacker() # FollowLaneBehavior(target_speed=5), with velocity (20, 0)
+ego = new Car at ego_spawn_pt
 
 id = 1
 c1 = new Car at c1_spawn_pt offset by (LEADCAR_TO_EGO, 0),
