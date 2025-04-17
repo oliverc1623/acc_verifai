@@ -12,7 +12,7 @@ model scenic.simulators.metadrive.model
 param verifaiSamplerType = 'ce' # TODO: use scenic/random/uniform/halton sampler to train from scratch; then use ce for fine-tuning
 
 #CONSTANTS
-TERMINATE_TIME = 40 / globalParameters.time_step
+TERMINATE_TIME = 20 / globalParameters.time_step
 
 # Parameters of the scenario.
 inter_vehivle_disance = 20 # Range(30, 60)
@@ -73,16 +73,17 @@ def get_vehicle_behind(id, vehicle, lane):
 	return closest
 
 def get_adjacent_lane(id, vehicle, direction):
-	"""Get the adjacent lane in the specified direction (left or right) from the current lane."""
+	"""Get the adjacent lane in the specified direction ('left' or 'right') from the current lane."""
 	lane_section = vehicle.laneSection
-	left_lane = lane_section.laneToLeft.lane
-	right_lane = lane_section.laneToRight.lane
-	if direction == "left" and left_lane:
-		return left_lane
-	elif direction == "right" and right_lane:
-		return right_lane
-	else:
-		raise ValueError("Direction must be 'left' or 'right'.")
+	if lane_section is None:
+		return None
+
+	if direction == "left" and lane_section.laneToLeft:
+		return lane_section.laneToLeft.lane
+	if direction == "right" and lane_section.laneToRight:
+		return lane_section.laneToRight.lane
+
+	return None
 
 def map_acc_to_throttle_brake(acc, max_throttle=1, max_brake=1):
 	if acc > 0:
@@ -146,7 +147,7 @@ behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshol
 		# Lateral: MOBIL
 		best_change_advantage = -float('inf')
 		target_lane_for_change = None
-		for direction in ["left"]:
+		for direction in ["left", "right"]:
 			adjacent_lane = get_adjacent_lane(id, self, direction)
 			if adjacent_lane is None or adjacent_lane == current_lane:
 				continue
@@ -236,7 +237,7 @@ c4 = new Car at c1_spawn_pt offset by (-50, 0),
 require always (distance from ego.position to c1.position) > 4.99
 terminate when ego.lane == None 
 '''
-# terminate when (simulation().currentTime > TERMINATE_TIME)
+terminate when (simulation().currentTime > TERMINATE_TIME)
 # terminate when (distance from ego to c1) < 4.5
 # terminate when (distance from c1 to c2) < 4.5
 # terminate when (distance from c2 to c3) < 4.5
