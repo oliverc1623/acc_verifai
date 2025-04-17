@@ -74,13 +74,13 @@ def get_vehicle_behind(id, vehicle, lane):
 
 def get_adjacent_lane(id, vehicle, direction):
 	"""Get the adjacent lane in the specified direction ('left' or 'right') from the current lane."""
-	lane_section = vehicle.laneSection
+	lane_section = network.laneSectionAt(vehicle.position)
 	if lane_section is None:
 		return None
 
-	if direction == "left" and lane_section.laneToLeft:
+	if direction == "left" and lane_section._laneToLeft:
 		return lane_section.laneToLeft.lane
-	if direction == "right" and lane_section.laneToRight:
+	if direction == "right" and lane_section._laneToRight:
 		return lane_section.laneToRight.lane
 
 	return None
@@ -131,7 +131,7 @@ behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshol
 	target_speed = 10 # Range(20, 22.5)
 	distance_wanted = Range(1.0, 2.0)
 	time_wanted = 1.5 # Range(0.1, 1.5)
-	delta = Range(2, 6)
+	delta = 2 # Range(2, 6)
 	lane_change_min_acc_gain = 1.0
 
 	_lon_controller_follow, _lat_controller_follow = simulation().getLaneFollowingControllers(self)
@@ -215,7 +215,7 @@ ego_spawn_pt  = (100 @ -150)
 c1_spawn_pt = (100 @ -147)
 
 id = 0
-ego = new Car at ego_spawn_pt
+ego = new Car at c1_spawn_pt
 
 id = 1
 c1 = new Car at c1_spawn_pt offset by (LEADCAR_TO_EGO, 0),
