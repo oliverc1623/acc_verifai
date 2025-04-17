@@ -144,36 +144,39 @@ behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshol
 		current_lane = network.laneAt(self.position)
 		current_centerline = current_lane.centerline
 
+		vehicle_front = get_vehicle_ahead(id, self, current_lane)
+
 		# Lateral: MOBIL
 		best_change_advantage = -float('inf')
 		target_lane_for_change = None
-		for direction in ["left", "right"]:
-			adjacent_lane = get_adjacent_lane(id, self, direction)
-			if adjacent_lane is None or adjacent_lane == current_lane:
-				continue
+		if vehicle_front:
+			for direction in ["left", "right"]:
+				adjacent_lane = get_adjacent_lane(id, self, direction)
+				if adjacent_lane is None or adjacent_lane == current_lane:
+					continue
 
-			# find relevant vehicles for MOBIL calculation
-			ego_leader = get_vehicle_ahead(id, self, current_lane)
-			ego_follower = get_vehicle_behind(id, self, current_lane)
-			adjacent_leader = get_vehicle_ahead(id, self, adjacent_lane)
-			adjacent_follower = get_vehicle_behind(id, self, adjacent_lane)
+				# find relevant vehicles for MOBIL calculation
+				ego_leader = get_vehicle_ahead(id, self, current_lane)
+				ego_follower = get_vehicle_behind(id, self, current_lane)
+				adjacent_leader = get_vehicle_ahead(id, self, adjacent_lane)
+				adjacent_follower = get_vehicle_behind(id, self, adjacent_lane)
 
-			# Is the maneuver unsafe for the new following vehicle?
-			adjacent_follower_acc = idm_acc(adjacent_follower, adjacent_leader, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
-			adjacent_follower_pred_acc = idm_acc(adjacent_follower, self, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
-			if adjacent_follower_pred_acc < -safe_braking_limit:
-				continue
-			
-			# Is there an acceleration advantage for me and/or my followers to change lane?
-			ego_pred_acc = idm_acc(self, adjacent_leader, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
-			ego_acc = idm_acc(self, ego_leader, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
-			ego_follower_acc = idm_acc(ego_follower, self, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
-			ego_follower_pred_acc = idm_acc(ego_follower, ego_leader, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
+				# Is the maneuver unsafe for the new following vehicle?
+				adjacent_follower_acc = idm_acc(adjacent_follower, adjacent_leader, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
+				adjacent_follower_pred_acc = idm_acc(adjacent_follower, self, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
+				if adjacent_follower_pred_acc < -safe_braking_limit:
+					continue
+				
+				# Is there an acceleration advantage for me and/or my followers to change lane?
+				ego_pred_acc = idm_acc(self, adjacent_leader, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
+				ego_acc = idm_acc(self, ego_leader, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
+				ego_follower_acc = idm_acc(ego_follower, self, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
+				ego_follower_pred_acc = idm_acc(ego_follower, ego_leader, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
 
-			incentive = (ego_pred_acc - ego_acc) + politeness * ((adjacent_follower_pred_acc - adjacent_follower_acc) + (ego_follower_pred_acc - ego_follower_acc))
-			if incentive < lane_change_min_acc_gain:
-				continue
-			target_lane_for_change = adjacent_lane
+				incentive = (ego_pred_acc - ego_acc) + politeness * ((adjacent_follower_pred_acc - adjacent_follower_acc) + (ego_follower_pred_acc - ego_follower_acc))
+				if incentive < lane_change_min_acc_gain:
+					continue
+				target_lane_for_change = adjacent_lane
 
 		if target_lane_for_change:
 			change_centerline = target_lane_for_change.centerline
@@ -193,7 +196,6 @@ behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshol
 			current_lane = target_lane_for_change
 			current_centerline = current_lane.centerline
 		else:
-			vehicle_front = get_vehicle_ahead(id, self, current_lane)
 			acceleration = idm_acc(self, vehicle_front, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
 			throttle, brake = map_acc_to_throttle_brake(acceleration)
 
