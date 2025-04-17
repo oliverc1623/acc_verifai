@@ -15,7 +15,7 @@ param verifaiSamplerType = 'ce' # TODO: use scenic/random/uniform/halton sampler
 TERMINATE_TIME = 40 / globalParameters.time_step
 
 # Parameters of the scenario.
-inter_vehivle_disance = 30 # Range(30, 60)
+inter_vehivle_disance = 20 # Range(30, 60)
 
 # platoon placement 
 LEADCAR_TO_EGO = C1_TO_C2 = C2_TO_C3 = -inter_vehivle_disance
@@ -106,6 +106,9 @@ def regulateSteering(steer, past_steer, max_steer=0.8):
 	return steer
 
 def idm_acc(agent, vehicle_in_front, acc_factor=1.0, deacc_factor=-2, target_speed=10, distance_wanted=2, time_wanted=1.5, delta=2):
+	if not agent:
+		return 0.0
+
 	acceleration = acc_factor * (1-np.power(max(agent.speed, 0) / target_speed, delta))
 	if vehicle_in_front is None:
 		return acceleration
@@ -124,10 +127,11 @@ behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshol
 	# IDM params
 	acc_factor = 1.0
 	deacc_factor = Range(-6,-4)
-	target_speed = Range(20, 22.5)
+	target_speed = 10 # Range(20, 22.5)
 	distance_wanted = Range(1.0, 2.0)
-	time_wanted = Range(0.1, 1.5)
+	time_wanted = 1.5 # Range(0.1, 1.5)
 	delta = Range(2, 6)
+	lane_change_min_acc_gain = 1.0
 
 	_lon_controller_follow, _lat_controller_follow = simulation().getLaneFollowingControllers(self)
 	_lon_controller_change, _lat_controller_change = simulation().getLaneChangingControllers(self)
@@ -142,8 +146,7 @@ behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshol
 		# Lateral: MOBIL
 		best_change_advantage = -float('inf')
 		target_lane_for_change = None
-
-		for direction in ["left", "right"]:
+		for direction in ["left"]:
 			adjacent_lane = get_adjacent_lane(id, self, direction)
 			if adjacent_lane is None or adjacent_lane == current_lane:
 				continue
@@ -155,31 +158,21 @@ behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshol
 			adjacent_follower = get_vehicle_behind(id, self, adjacent_lane)
 
 			# Is the maneuver unsafe for the new following vehicle?
-			acc_ego_old = idm_acc(self, ego_leader, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
-			acc_old_follower_old = 0
-			if ego_follower:
-				acc_old_follower_old = idm_acc(ego_follower, self, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
-			acc_new_follower_old = 0
-			if adjacent_follower:
-				original_leader_for_new_follower = get_vehicle_ahead(id, adjacent_follower, adjacent_lane)
-				acc_new_follower_old = idm_acc(adjacent_follower, original_leader_for_new_follower, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
-
-			# Calculate hypothetical accelerations *after* the change using IDM
-			acc_ego_new = idm_acc(self, adjacent_leader)
-			acc_old_follower_new = 0
-			if ego_follower:
-				acc_old_follower_new = idm_acc(ego_follower, ego_leader, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
-			acc_new_follower_new = 0
-			if adjacent_follower:
-				acc_new_follower_new = idm_acc(adjacent_follower, self, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
-
-			if adjacent_follower and acc_new_follower_new < -safe_braking_limit:
+			adjacent_follower_acc = idm_acc(adjacent_follower, adjacent_leader, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
+			adjacent_follower_pred_acc = idm_acc(adjacent_follower, self, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
+			if adjacent_follower_pred_acc < -safe_braking_limit:
 				continue
+			
+			# Is there an acceleration advantage for me and/or my followers to change lane?
+			ego_pred_acc = idm_acc(self, adjacent_leader, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
+			ego_acc = idm_acc(self, ego_leader, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
+			ego_follower_acc = idm_acc(ego_follower, self, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
+			ego_follower_pred_acc = idm_acc(ego_follower, ego_leader, target_speed=target_speed, distance_wanted=distance_wanted, time_wanted=time_wanted, delta=delta)
 
-			incentive = (acc_ego_new - acc_ego_old) + politeness * ((acc_new_follower_new - acc_new_follower_old) + (acc_old_follower_new - acc_old_follower_old))
-			if (incentive > switching_threshold) and (incentive > best_change_advantage):
-				best_change_advantage = incentive
-				target_lane_for_change = adjacent_lane
+			incentive = (ego_pred_acc - ego_acc) + politeness * ((adjacent_follower_pred_acc - adjacent_follower_acc) + (ego_follower_pred_acc - ego_follower_acc))
+			if incentive < lane_change_min_acc_gain:
+				continue
+			target_lane_for_change = adjacent_lane
 
 		if target_lane_for_change:
 			change_centerline = target_lane_for_change.centerline
@@ -217,22 +210,26 @@ behavior dummy_attacker():
 		take SetThrottleAction(0.3), SetBrakeAction(0.0), SetSteerAction(-0.3)
 
 #PLACEMENT
-ego_spawn_pt  = (200 @ -51.87)
-c1_spawn_pt = (200 @ -48.87)
+ego_spawn_pt  = (100 @ -150)
+c1_spawn_pt = (100 @ -147)
 
 id = 0
-ego = new Car at c1_spawn_pt, with behavior dummy_attacker() # FollowLaneBehavior(target_speed=5), with velocity (20, 0)
+ego = new Car at ego_spawn_pt, with behavior FollowLaneBehavior(target_speed=5) #, with behavior dummy_attacker() # FollowLaneBehavior(target_speed=5), with velocity (20, 0)
 
 id = 1
 c1 = new Car at c1_spawn_pt offset by (LEADCAR_TO_EGO, 0),
 	with behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshold = 0.3) # TODO: double check with LaneChangeBehavior
 
 id = 2
-c2 = new Car at c1.position offset by (C1_TO_C2, 0),
+c2 = new Car at c1.position offset by (C1_TO_C2, 4),
 	with behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshold = 0.3)
 
 id = 3
-c3 = new Car at c2.position offset by (C2_TO_C3, 4),
+c3 = new Car at c2.position offset by (C2_TO_C3, 0),
+	with behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshold = 0.3)
+
+id = 4
+c4 = new Car at c1_spawn_pt offset by (-50, 0),
 	with behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshold = 0.3)
 
 '''
