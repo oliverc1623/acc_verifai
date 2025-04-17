@@ -1,5 +1,6 @@
 import contextlib
 import logging
+import pathlib
 import time
 from collections import deque
 
@@ -7,8 +8,13 @@ import gymnasium as gym
 import numpy as np
 import torch
 import torch.multiprocessing as mp  # Use torch multiprocessing
+from gymnasium import spaces
 from torch import nn, optim
 from torch.distributions import Categorical
+
+import scenic
+from scenic.gym import ScenicGymEnv
+from scenic.simulators.metadrive import MetaDriveSimulator
 
 
 # --- Configuration ---
@@ -37,10 +43,12 @@ torch.manual_seed(SEED)
 if torch.cuda.is_available():
     torch.cuda.manual_seed_all(SEED)
 
+LOG_STD_MAX = 2
+LOG_STD_MIN = -5
 # --- Actor-Critic Network ---
 class ActorCritic(nn.Module):
     """A simple Actor-Critic network for discrete action spaces. Shares layers between actor and critic."""
-    def __init__(self, obs_dim: int, action_dim: int, hidden_dim: int = 64):
+    def __init__(self, obs_dim: int, action_space: spaces.Box, hidden_dim: int = 64):
         super().__init__()
         self.shared_layer = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
@@ -48,8 +56,18 @@ class ActorCritic(nn.Module):
             nn.Linear(hidden_dim, hidden_dim),
             nn.Tanh(),
         )
-        self.actor = nn.Linear(hidden_dim, action_dim)  # Policy head
+        self.fc_mean = nn.Linear(hidden_dim, np.prod(action_space.shape))
+        self.fc_logstd = nn.Linear(hidden_dim, np.prod(action_space.shape))
         self.critic = nn.Linear(hidden_dim, 1)       # Value head
+
+        self.register_buffer(
+            "action_scale",
+            torch.tensor((action_space.high - action_space.low) / 2.0, dtype=torch.float32),
+        )
+        self.register_buffer(
+            "action_bias",
+            torch.tensor((action_space.high + action_space.low) / 2.0, dtype=torch.float32),
+        )
 
     def forward(self, x: any) -> tuple:
         """Forward pass through the network."""
@@ -57,18 +75,33 @@ class ActorCritic(nn.Module):
              # Ensure input is a tensor, handle potential double type from numpy
             x = torch.tensor(x, dtype=torch.float32)
         shared_features = self.shared_layer(x)
-        action_logits = self.actor(shared_features)
+        mean = self.fc_mean(shared_features)
+        log_std = self.fc_logstd(shared_features)
+        log_std = torch.tanh(log_std)
+        log_std = LOG_STD_MIN + 0.5 * (LOG_STD_MAX - LOG_STD_MIN) * (log_std + 1)  # From SpinUp / Denis Yarats
+
         value = self.critic(shared_features)
-        return action_logits, value
+        return mean, log_std, value
 
 # --- Worker Function ---
 def worker_fn(worker_id: int, env_name: str, steps_per_worker: int, model_state_dict: dict, data_queue: deque, seed: int) -> None:
     """Execute function for each worker process. Initializes environment and model, collects trajectories, and sends data back."""
     logger.debug("Worker %s: Initializing...", worker_id)
     # Each worker needs its own environment instance and random seed
-    env = gym.make(env_name)
+    scenario = scenic.scenarioFromFile(
+        "idm.scenic",
+        model="scenic.simulators.metadrive.model",
+        mode2D=True,
+    )
+    env = ScenicGymEnv(
+        scenario,
+        MetaDriveSimulator(timestep=0.1, sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False, real_time=False),
+        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(5,4)),
+        action_space=spaces.Box(low=-1, high=1, shape=(2,)),
+        max_steps=700,
+    )
     obs_space_shape = env.observation_space.shape
-    action_space_n = env.action_space.n
+    action_space = env.action_space
     # Ensure the observation space shape is correctly handled (e.g., flattened if needed)
     obs_dim = np.prod(obs_space_shape) if isinstance(obs_space_shape, tuple) else obs_space_shape[0]
 
@@ -79,7 +112,7 @@ def worker_fn(worker_id: int, env_name: str, steps_per_worker: int, model_state_
     # Note: gym.make doesn't directly accept seed, reset does.
 
     # Initialize local model and load state dict
-    local_model = ActorCritic(obs_dim, action_space_n)
+    local_model = ActorCritic(obs_dim, action_space)
     local_model.load_state_dict(model_state_dict)
     local_model.eval() # Set model to evaluation mode for rollouts
 
@@ -97,17 +130,24 @@ def worker_fn(worker_id: int, env_name: str, steps_per_worker: int, model_state_
         obs_tensor = torch.tensor(obs.flatten(), dtype=torch.float32).unsqueeze(0) # Flatten obs if needed
 
         with torch.no_grad(): # No need to track gradients during rollout
-            action_logits, value = local_model(obs_tensor)
-            action_dist = Categorical(logits=action_logits)
-            action = action_dist.sample()
-            log_prob = action_dist.log_prob(action)
+            mean, log_std, value = local_model(obs_tensor)
+            std = log_std.exp()
+            normal = torch.distributions.Normal(mean, std)
+            x_t = normal.rsample()  # for reparameterization trick (mean + std * N(0,1))
+            y_t = torch.tanh(x_t)
+            action = y_t * local_model.action_scale + local_model.action_bias
+            log_prob = normal.log_prob(x_t)
+            # Enforcing Action Bound
+            log_prob -= torch.log(local_model.action_scale * (1 - y_t.pow(2)) + 1e-6)
+            log_prob = log_prob.sum(1, keepdim=True)
 
-        next_obs, reward, terminated, truncated, _ = env.step(action.item())
+        action = action.cpu().numpy().squeeze(0)
+        next_obs, reward, terminated, truncated, _ = env.step(action)
         done = terminated or truncated
 
         # Store transition data
         observations.append(obs.flatten()) # Store flattened obs
-        actions.append(action.item())
+        actions.append(action)
         log_probs.append(log_prob.item())
         rewards.append(reward)
         dones.append(done)
@@ -122,13 +162,13 @@ def worker_fn(worker_id: int, env_name: str, steps_per_worker: int, model_state_
     # Calculate the value of the last state for GAE calculation
     last_obs_tensor = torch.tensor(obs.flatten(), dtype=torch.float32).unsqueeze(0)
     with torch.no_grad():
-        _, last_value = local_model(last_obs_tensor)
+        _, _, last_value = local_model(last_obs_tensor)
         last_value = last_value.item()
 
     # Convert lists to numpy arrays for efficient transfer
     trajectory_data = {
         "observations": np.array(observations, dtype=np.float32),
-        "actions": np.array(actions, dtype=np.int64),
+        "actions": np.array(actions, dtype=np.float32),
         "log_probs": np.array(log_probs, dtype=np.float32),
         "rewards": np.array(rewards, dtype=np.float32),
         "dones": np.array(dones, dtype=np.bool_),
@@ -171,6 +211,7 @@ def compute_gae(
     returns = advantages + values
     return advantages, returns
 
+EPSILON = 1e-5
 # --- PPO Update Function ---
 def ppo_update(model: nn.Module, optimizer: optim.Optimizer, batch_obs: torch.Tensor, batch_actions: torch.Tensor, batch_log_probs_old: torch.Tensor,
                batch_advantages: torch.Tensor, batch_returns: torch.Tensor, num_epochs: int, minibatch_size: int,
@@ -195,10 +236,19 @@ def ppo_update(model: nn.Module, optimizer: optim.Optimizer, batch_obs: torch.Te
             mb_returns = batch_returns[minibatch_indices]
 
             # Get new log probabilities, values, and entropy from the current policy
-            action_logits, values_pred = model(mb_obs)
-            dist = Categorical(logits=action_logits)
-            log_probs_new = dist.log_prob(mb_actions)
-            entropy = dist.entropy().mean()
+            mean, log_std, values_pred = model(mb_obs)
+            std = log_std.exp()
+
+            normal = torch.distributions.Normal(mean, std)
+
+            mb_actions_clamped = torch.clamp(mb_actions, -1.0 + EPSILON, 1.0 - EPSILON)
+            unsquashed_mb_actions = torch.atanh(mb_actions_clamped)
+            log_probs_gaussian = normal.log_prob(unsquashed_mb_actions).sum(dim=-1)
+            log_prob_squash_correction = torch.log(1.0 - mb_actions.pow(2) + EPSILON).sum(dim=-1)
+            log_probs_new = log_probs_gaussian - log_prob_squash_correction
+
+            # Entropy of the Gaussian distribution (before squashing)
+            entropy = normal.entropy().mean()
             values_pred = values_pred.squeeze(-1) # Ensure value shape matches returns
 
             # Calculate Policy Loss (Clipped Surrogate Objective)
@@ -233,14 +283,12 @@ def main() -> None:
     logger.info("Hyperparameters: gamma=%s, lambda=%s, clip_eps=%s, lr=%s", GAMMA, GAE_LAMBDA, CLIP_EPSILON, LR)
 
     # Create a dummy environment to get observation and action space dimensions
-    dummy_env = gym.make(ENV_NAME)
-    obs_space_shape = dummy_env.observation_space.shape
-    action_space_n = dummy_env.action_space.n
+    obs_space_shape = (5,4)
+    action_space = spaces.Box(low=-1, high=1, shape=(2,))
     obs_dim = np.prod(obs_space_shape) if isinstance(obs_space_shape, tuple) else obs_space_shape[0]
-    dummy_env.close()
 
     # Initialize the Actor-Critic model and optimizer
-    model = ActorCritic(obs_dim, action_space_n)
+    model = ActorCritic(obs_dim, action_space)
     optimizer = optim.Adam(model.parameters(), lr=LR)
 
     # Calculate total number of updates
