@@ -31,11 +31,9 @@ VALUE_LOSS_COEF = 0.5    # Value function loss coefficient
 MAX_GRAD_NORM = 0.5      # Gradient clipping threshold
 SEED = 42                # Random seed
 
-# --- Setup Logging ---
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# --- Set Seed for Reproducibility ---
 rng = np.random.default_rng(SEED)
 torch.manual_seed(SEED)
 if torch.cuda.is_available():
