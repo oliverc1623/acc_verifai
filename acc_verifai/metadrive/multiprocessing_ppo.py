@@ -16,7 +16,7 @@ from scenic.simulators.metadrive import MetaDriveSimulator
 
 
 # --- Configuration ---
-ENV_NAME = "CartPole-v1"  # Environment to use
+ENV_NAME = "IDM-MOBIL Distrupt"  # Environment to use
 NUM_WORKERS = 4         # Number of parallel processes for data collection
 TOTAL_TIMESTEPS = 1_000_000 # Total timesteps for training
 STEPS_PER_WORKER = 256  # Timesteps collected by each worker per iteration
@@ -315,7 +315,7 @@ def main() -> None:
         current_model_state_dict = model.state_dict() # Get current weights
         # Share state dict (serializable) instead of the whole model
         for i in range(NUM_WORKERS):
-            p = mp.Process(target=worker_fn, args=(i, ENV_NAME, STEPS_PER_WORKER,
+            p = mp.Process(target=worker_fn, args=(i, STEPS_PER_WORKER,
                                                    current_model_state_dict, data_queue, SEED + update * NUM_WORKERS)) # Pass unique seed component
             p.start()
             processes.append(p)
