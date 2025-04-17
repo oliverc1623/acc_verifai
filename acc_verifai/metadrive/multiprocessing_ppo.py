@@ -4,13 +4,11 @@ import pathlib
 import time
 from collections import deque
 
-import gymnasium as gym
 import numpy as np
 import torch
 import torch.multiprocessing as mp  # Use torch multiprocessing
 from gymnasium import spaces
 from torch import nn, optim
-from torch.distributions import Categorical
 
 import scenic
 from scenic.gym import ScenicGymEnv
@@ -84,7 +82,7 @@ class ActorCritic(nn.Module):
         return mean, log_std, value
 
 # --- Worker Function ---
-def worker_fn(worker_id: int, env_name: str, steps_per_worker: int, model_state_dict: dict, data_queue: deque, seed: int) -> None:
+def worker_fn(worker_id: int, steps_per_worker: int, model_state_dict: dict, data_queue: deque, seed: int) -> None:
     """Execute function for each worker process. Initializes environment and model, collects trajectories, and sends data back."""
     logger.debug("Worker %s: Initializing...", worker_id)
     # Each worker needs its own environment instance and random seed
