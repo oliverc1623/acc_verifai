@@ -1,3 +1,4 @@
+# %%
 import contextlib
 import logging
 import pathlib
@@ -32,7 +33,7 @@ class Args:
     # Total timesteps for training
     total_timesteps: int = 1_000_000
     # Timesteps collected by each worker per iteration
-    steps_per_worker: int = 2
+    steps_per_worker: int = 256
     # Number of optimization epochs per PPO iteration
     num_epochs: int = 4
     # Size of minibatches for optimization
@@ -109,8 +110,8 @@ def worker_fn(worker_id: int, steps_per_worker: int, model_state_dict: dict, dat
     env = ScenicGymEnv(
         scenario,
         MetaDriveSimulator(timestep=0.1, sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False, real_time=False),
-        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(5, 4)),
-        action_space=spaces.Box(low=-1, high=1, shape=(2,)),
+        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(1, 5)),
+        action_space=spaces.Box(low=-1, high=1, shape=(1,)),
         max_steps=700,
     )
     obs_space_shape = env.observation_space.shape
@@ -294,9 +295,9 @@ def main() -> None:
     # temp env to get obs and action space
     env = ScenicGymEnv(
         env_name,
-        MetaDriveSimulator(timestep=0.1, sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False, real_time=False),
-        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(5, 4)),
-        action_space=spaces.Box(low=-1, high=1, shape=(2,)),
+        MetaDriveSimulator(timestep=0.05, sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False, real_time=False),
+        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(1, 5)),
+        action_space=spaces.Box(low=-1, high=1, shape=(1,)),
         max_steps=700,
     )
     obs_space_shape = env.observation_space.shape
