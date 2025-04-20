@@ -36,14 +36,15 @@ model = ActorCritic(obs_dim, action_space)
 model.load_state_dict(torch.load("models/ppo_lane_follow_model.pth"))
 
 # %%
-n_iterations = 1
-obs, _ = env.reset()  # reset returns (obs, info)
+n_iterations = 10
+obs, _ = env.reset()
 
 for _ in range(n_iterations):
     done = False
+    cum_reward = 0
     while not done:
         # Prepare observation as a Torch tensor and add batch dimension
-        state = torch.FloatTensor(obs).unsqueeze(0)
+        state = torch.tensor(obs.flatten(), dtype=torch.float32).unsqueeze(0)
 
         with torch.no_grad():
             # Obtain action from the model (assumes model returns (action, value) tuple)
@@ -55,11 +56,12 @@ for _ in range(n_iterations):
             action = y_t * model.action_scale + model.action_bias
 
         # Remove batch dimension and convert to numpy array for the environment
-        action = action.squeeze(0).numpy()
+        action = action.cpu().numpy().squeeze(0)
 
         # Step the environment (gymnasium returns: next_obs, reward, done, truncated, info)
         next_obs, reward, done, truncated, info = env.step(action)
-
+        cum_reward += reward
+    print(f"Episode finished with cumulative reward: {cum_reward}")
     obs, _ = env.reset()
 
 # %%
