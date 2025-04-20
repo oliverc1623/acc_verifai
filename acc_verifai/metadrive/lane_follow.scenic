@@ -14,5 +14,5 @@ spawn_pt = (100 @ -150)
 ego = new Car at spawn_pt
 
 targetLane = ego.lane
-max_deviation = 2.0
+max_deviation = 1.0
 terminate when targetLane.centerline.distanceTo(ego.position) > max_deviation
