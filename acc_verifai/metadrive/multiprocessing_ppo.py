@@ -54,6 +54,8 @@ class Args:
     max_grad_norm: float = 0.5
     # Random seed
     seed: int = 4
+    # Directory to save models
+    model_dir: str = "models"
 
 
 LOG_STD_MAX = 2
@@ -273,6 +275,12 @@ def ppo_update(
 def main() -> None:
     """Run the PPO training."""
     args = tyro.cli(Args)
+
+    # Ensure model directory exists
+    if not pathlib.Path.exists(pathlib.Path(Args.model_dir)):
+        pathlib.Path.mkdir(pathlib.Path(Args.model_dir))
+
+    # Set the environment name based on the scenic file
     env_name = pathlib.Path(args.scenic_file).stem
 
     # Set up multiprocess start method
@@ -424,11 +432,13 @@ def main() -> None:
                 avg_reward,
                 avg_length,
             )
+            # Save model every 10 updates
+            torch.save(model.state_dict(), f"models/ppo_{env_name}_model.pth")
 
     end_time = time.time()
     logger.info("Training finished in %.2f seconds.", end_time - start_time)
 
-    torch.save(model.state_dict(), f"ppo_{env_name}_model.pth")
+    torch.save(model.state_dict(), f"models/ppo_{env_name}_model.pth")
     logger.info("Model saved to ppo_%s_model.pth", env_name)
 
 
