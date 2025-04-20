@@ -6,14 +6,13 @@ To run this file using the Carla simulator:
     scenic examples/driving/car.scenic --2d --model scenic.simulators.carla.model --simulate
 '''
 
-param map = localPath('../maps/Town05.xodr')
+param map = localPath('../maps/Town06.xodr')
 
 model scenic.domains.driving.model
 
-behavior dummy_attacker():
-    while True:
-        print(self.lane.orientation.value)
-        print(self.heading)
-        take SetThrottleAction(1.0), SetBrakeAction(0.0), SetSteerAction(-0.3)
+spawn_pt = (100 @ -150)
+ego = new Car at spawn_pt
 
-ego = new Car with behavior dummy_attacker()
+targetLane = ego.lane
+max_deviation = 2.0
+terminate when targetLane.centerline.distanceTo(ego.position) > max_deviation
