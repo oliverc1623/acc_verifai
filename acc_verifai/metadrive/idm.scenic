@@ -221,19 +221,19 @@ ego = new Car at ego_spawn_pt
 
 id = 1
 c1 = new Car at c1_spawn_pt offset by (LEADCAR_TO_EGO, 0),
-	with behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshold = 0.3) # TODO: double check with LaneChangeBehavior
+	with behavior IDM_MOBIL(id, politeness=Range(0,1), safe_braking_limit=1, switching_threshold = Range(0,1)) # TODO: double check with LaneChangeBehavior
 
 id = 2
 c2 = new Car at c1.position offset by (C1_TO_C2, 4),
-	with behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshold = 0.3)
+	with behavior IDM_MOBIL(id, politeness=Range(0,1), safe_braking_limit=1, switching_threshold = Range(0,1))
 
 id = 3
 c3 = new Car at c2.position offset by (C2_TO_C3, 0),
-	with behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshold = 0.3)
+	with behavior IDM_MOBIL(id, politeness=Range(0,1), safe_braking_limit=1, switching_threshold = Range(0,1))
 
 id = 4
 c4 = new Car at c1_spawn_pt offset by (-50, 0),
-	with behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshold = 0.3)
+	with behavior IDM_MOBIL(id, politeness=Range(0,1), safe_braking_limit=1, switching_threshold = Range(0,1))
 
 '''
 require always (distance from ego.position to c1.position) > 4.99
