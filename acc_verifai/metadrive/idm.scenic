@@ -12,7 +12,7 @@ model scenic.simulators.metadrive.model
 param verifaiSamplerType = 'ce' # TODO: use scenic/random/uniform/halton sampler to train from scratch; then use ce for fine-tuning
 
 #CONSTANTS
-TERMINATE_TIME = 20 / globalParameters.time_step
+TERMINATE_TIME = 40 / globalParameters.time_step
 
 # Parameters of the scenario.
 inter_vehivle_disance = 20 # Range(30, 60)
@@ -210,7 +210,7 @@ behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshol
 
 behavior dummy_attacker():
 	while True:
-		take SetThrottleAction(0.3), SetBrakeAction(0.0), SetSteerAction(-0.3)
+		take SetThrottleAction(1.0), SetBrakeAction(0.0), SetSteerAction(0.0)
 
 #PLACEMENT
 ego_spawn_pt  = (100 @ -150)
@@ -240,6 +240,11 @@ require always (distance from ego.position to c1.position) > 4.99
 terminate when ego.lane == None 
 '''
 terminate when (simulation().currentTime > TERMINATE_TIME)
-# terminate when (distance from ego to c1) < 4.5
+terminate when ego.metaDriveActor.crash_vehicle
+terminate when c1.metaDriveActor.crash_vehicle
+terminate when c2.metaDriveActor.crash_vehicle
+terminate when c3.metaDriveActor.crash_vehicle
+terminate when c4.metaDriveActor.crash_vehicle
+
 # terminate when (distance from c1 to c2) < 4.5
 # terminate when (distance from c2 to c3) < 4.5
