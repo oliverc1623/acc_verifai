@@ -111,8 +111,8 @@ def worker_fn(worker_id: int, steps_per_worker: int, model_state_dict: dict, dat
     )
     env = ScenicGymEnv(
         scenario,
-        MetaDriveSimulator(timestep=0.1, sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False, real_time=False),
-        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(1, 5)),
+        MetaDriveSimulator(timestep=0.05, sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False, real_time=False),
+        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(5, 5)),
         action_space=spaces.Box(low=-1, high=1, shape=(1,)),
         max_steps=700,
     )
@@ -277,8 +277,9 @@ def main() -> None:
     args = tyro.cli(Args)
 
     # Ensure model directory exists
-    if not pathlib.Path.exists(pathlib.Path(Args.model_dir)):
-        pathlib.Path.mkdir(pathlib.Path(Args.model_dir))
+    if not pathlib.Path.exists(pathlib.Path(args.model_dir)):
+        pathlib.Path.mkdir(pathlib.Path(args.model_dir))
+    print("Model directory:", args.model_dir)
 
     # Set the environment name based on the scenic file
     env_name = pathlib.Path(args.scenic_file).stem
@@ -304,7 +305,7 @@ def main() -> None:
     env = ScenicGymEnv(
         env_name,
         MetaDriveSimulator(timestep=0.05, sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False, real_time=False),
-        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(1, 5)),
+        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(5, 5)),
         action_space=spaces.Box(low=-1, high=1, shape=(1,)),
         max_steps=700,
     )
@@ -433,12 +434,12 @@ def main() -> None:
                 avg_length,
             )
             # Save model every 10 updates
-            torch.save(model.state_dict(), f"models/ppo_{env_name}_model.pth")
+            torch.save(model.state_dict(), f"{args.model_dir}/ppo_{env_name}_model.pth")
 
     end_time = time.time()
     logger.info("Training finished in %.2f seconds.", end_time - start_time)
 
-    torch.save(model.state_dict(), f"models/ppo_{env_name}_model.pth")
+    torch.save(model.state_dict(), f"{args.model_dir}/ppo_{env_name}_model.pth")
     logger.info("Model saved to ppo_%s_model.pth", env_name)
 
 
