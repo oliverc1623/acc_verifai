@@ -43,7 +43,7 @@ def get_vehicle_ahead(id, vehicle, lane):
 		d = abs(vehicle.position.x - obj.position.x) # (distance from vehicle.position to obj.position)
 		if vehicle == obj or d < 0.1:
 			continue
-		if lane != obj.lane:
+		if lane != obj._lane:
 			continue
 		if d < minDistance:
 			minDistance = d
@@ -65,7 +65,7 @@ def get_vehicle_behind(id, vehicle, lane):
 		d = abs(obj.position.x - vehicle.position.x)
 		if vehicle == obj or d < 0.1:
 			continue
-		if lane != obj.lane:
+		if lane != obj._lane:
 			continue
 		if d < minDistance:
 			minDistance = d
@@ -128,10 +128,10 @@ behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshol
 	# IDM params
 	acc_factor = 1.0
 	deacc_factor = Range(-6,-4)
-	target_speed = 10 # Range(20, 22.5)
+	target_speed = Range(20, 22.5)
 	distance_wanted = Range(1.0, 2.0)
-	time_wanted = 1.5 # Range(0.1, 1.5)
-	delta = 2 # Range(2, 6)
+	time_wanted = Range(0.1, 1.5)
+	delta = Range(2, 6)
 	lane_change_min_acc_gain = 1.0
 
 	_lon_controller_follow, _lat_controller_follow = simulation().getLaneFollowingControllers(self)
@@ -217,7 +217,7 @@ ego_spawn_pt  = (100 @ -150)
 c1_spawn_pt = (100 @ -147)
 
 id = 0
-ego = new Car at c1_spawn_pt
+ego = new Car at ego_spawn_pt
 
 id = 1
 c1 = new Car at c1_spawn_pt offset by (LEADCAR_TO_EGO, 0),
@@ -241,6 +241,7 @@ terminate when ego.lane == None
 '''
 terminate when (simulation().currentTime > TERMINATE_TIME)
 terminate when ego.metaDriveActor.crash_vehicle
+terminate when ego._lane == None
 terminate when c1.metaDriveActor.crash_vehicle
 terminate when c2.metaDriveActor.crash_vehicle
 terminate when c3.metaDriveActor.crash_vehicle
