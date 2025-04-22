@@ -127,7 +127,7 @@ def idm_acc(agent, vehicle_in_front, acc_factor=1.0, deacc_factor=-2, target_spe
 behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshold = 0.5):
 	# IDM params
 	acc_factor = 1.0
-	deacc_factor = Range(-6,-4)
+	deacc_factor = Range(-3,-1)
 	target_speed = Range(20, 22.5)
 	distance_wanted = Range(1.0, 2.0)
 	time_wanted = Range(0.1, 1.5)
@@ -217,7 +217,7 @@ ego_spawn_pt  = (100 @ -150)
 c1_spawn_pt = (100 @ -147)
 
 id = 0
-ego = new Car at ego_spawn_pt
+ego = new Car at c1_spawn_pt
 
 id = 1
 c1 = new Car at c1_spawn_pt offset by (LEADCAR_TO_EGO, 0),
