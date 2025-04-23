@@ -217,23 +217,31 @@ ego_spawn_pt  = (100 @ -150)
 c1_spawn_pt = (100 @ -147)
 
 id = 0
-ego = new Car at c1_spawn_pt
+ego = new Car at ego_spawn_pt
 
 id = 1
 c1 = new Car at c1_spawn_pt offset by (LEADCAR_TO_EGO, 0),
-	with behavior IDM_MOBIL(id, politeness=Range(0,1), safe_braking_limit=1, switching_threshold = Range(0,1)) # TODO: double check with LaneChangeBehavior
+	with behavior IDM_MOBIL(id, politeness=Range(0,0.5), safe_braking_limit=1, switching_threshold = Range(0,0.3)) # TODO: double check with LaneChangeBehavior
 
 id = 2
 c2 = new Car at c1.position offset by (C1_TO_C2, 4),
-	with behavior IDM_MOBIL(id, politeness=Range(0,1), safe_braking_limit=1, switching_threshold = Range(0,1))
+	with behavior IDM_MOBIL(id, politeness=Range(0,0.5), safe_braking_limit=1, switching_threshold = Range(0,0.3))
 
 id = 3
 c3 = new Car at c2.position offset by (C2_TO_C3, 0),
-	with behavior IDM_MOBIL(id, politeness=Range(0,1), safe_braking_limit=1, switching_threshold = Range(0,1))
+	with behavior IDM_MOBIL(id, politeness=Range(0,0.5), safe_braking_limit=1, switching_threshold = Range(0,0.3))
 
 id = 4
 c4 = new Car at c1_spawn_pt offset by (-50, 0),
-	with behavior IDM_MOBIL(id, politeness=Range(0,1), safe_braking_limit=1, switching_threshold = Range(0,1))
+	with behavior IDM_MOBIL(id, politeness=Range(0,0.5), safe_braking_limit=1, switching_threshold = Range(0,0.3))
+
+id = 5
+c5 = new Car at c2.position offset by (C2_TO_C3, 4),
+	with behavior IDM_MOBIL(id, politeness=Range(0,0.5), safe_braking_limit=1, switching_threshold = Range(0,0.3))
+
+id = 6
+c6 = new Car at c1_spawn_pt offset by (C1_TO_C2, 8),
+	with behavior IDM_MOBIL(id, politeness=Range(0,0.5), safe_braking_limit=1, switching_threshold = Range(0,0.3))
 
 '''
 require always (distance from ego.position to c1.position) > 4.99
