@@ -421,7 +421,7 @@ def main() -> None:
         avg_reward = np.mean(episode_rewards) if episode_rewards else 0
         avg_length = np.mean(episode_lengths) if episode_lengths else 0
 
-        if update % 10 == 0 or update == 1:
+        if update % 1 == 0 or update == 1:
             logger.info(
                 "Update: %s/%s, Timesteps: %s/%s, FPS: %s, Episodes: %s, Avg Reward (Last 100): %.2f, Avg Length (Last 100): %.2f",
                 update,
