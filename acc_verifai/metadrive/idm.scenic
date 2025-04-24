@@ -9,7 +9,7 @@ param map = localPath('../maps/Town06.xodr')
 param carla_map = 'Town06'
 param time_step = 1.0/10
 model scenic.simulators.metadrive.model
-param verifaiSamplerType = 'ce' # TODO: use scenic/random/uniform/halton sampler to train from scratch; then use ce for fine-tuning
+param verifaiSamplerType = 'halton' # TODO: use scenic/random/uniform/halton sampler to train from scratch; then use ce for fine-tuning
 
 #CONSTANTS
 TERMINATE_TIME = 40 / globalParameters.time_step
@@ -225,27 +225,27 @@ ego = new Car at ego_spawn_pt, with velocity (15, 5)
 
 id = 1
 c1 = new Car at c1_spawn_pt offset by (LEADCAR_TO_EGO, 0),
-	with behavior IDM_MOBIL(id, politeness=Range(0,0.5), safe_braking_limit=1, switching_threshold = Range(0,0.3)) # TODO: double check with LaneChangeBehavior
+	with behavior IDM_MOBIL(id, politeness=VerifaiRange(0,0.5), safe_braking_limit=1, switching_threshold = Range(0,0.3)) # TODO: double check with LaneChangeBehavior
 
 id = 2
 c2 = new Car at c1.position offset by (C1_TO_C2, 4),
-	with behavior IDM_MOBIL(id, politeness=Range(0,0.5), safe_braking_limit=1, switching_threshold = Range(0,0.3))
+	with behavior IDM_MOBIL(id, politeness=VerifaiRange(0,0.5), safe_braking_limit=1, switching_threshold = Range(0,0.3))
 
 id = 3
 c3 = new Car at c2.position offset by (C2_TO_C3, 0),
-	with behavior IDM_MOBIL(id, politeness=Range(0,0.5), safe_braking_limit=1, switching_threshold = Range(0,0.3))
+	with behavior IDM_MOBIL(id, politeness=VerifaiRange(0,0.5), safe_braking_limit=1, switching_threshold = Range(0,0.3))
 
 id = 4
 c4 = new Car at c1_spawn_pt offset by (-50, 0),
-	with behavior IDM_MOBIL(id, politeness=Range(0,0.5), safe_braking_limit=1, switching_threshold = Range(0,0.3))
+	with behavior IDM_MOBIL(id, politeness=VerifaiRange(0,0.5), safe_braking_limit=1, switching_threshold = Range(0,0.3))
 
 id = 5
 c5 = new Car at c2.position offset by (C2_TO_C3, 4),
-	with behavior IDM_MOBIL(id, politeness=Range(0,0.5), safe_braking_limit=1, switching_threshold = Range(0,0.3))
+	with behavior IDM_MOBIL(id, politeness=VerifaiRange(0,0.5), safe_braking_limit=1, switching_threshold = Range(0,0.3))
 
 id = 6
 c6 = new Car at c1_spawn_pt offset by (C1_TO_C2, 8),
-	with behavior IDM_MOBIL(id, politeness=Range(0,0.5), safe_braking_limit=1, switching_threshold = Range(0,0.3))
+	with behavior IDM_MOBIL(id, politeness=VerifaiRange(0,0.5), safe_braking_limit=1, switching_threshold = Range(0,0.3))
 
 '''
 require always (distance from ego.position to c1.position) > 4.99
