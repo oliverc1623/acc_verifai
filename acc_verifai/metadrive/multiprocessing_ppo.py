@@ -112,8 +112,8 @@ def worker_fn(worker_id: int, steps_per_worker: int, model_state_dict: dict, dat
     env = ScenicGymEnv(
         scenario,
         MetaDriveSimulator(timestep=0.05, sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False, real_time=False),
-        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(5, 5)),
-        action_space=spaces.Box(low=-1, high=1, shape=(1,)),
+        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(5, 7)),
+        action_space=spaces.Box(low=-1, high=1, shape=(2,)),
         max_steps=700,
     )
     obs_space_shape = env.observation_space.shape
@@ -305,8 +305,8 @@ def main() -> None:
     env = ScenicGymEnv(
         env_name,
         MetaDriveSimulator(timestep=0.05, sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False, real_time=False),
-        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(5, 5)),
-        action_space=spaces.Box(low=-1, high=1, shape=(1,)),
+        observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(5, 7)),
+        action_space=spaces.Box(low=-1, high=1, shape=(2,)),
         max_steps=700,
     )
     obs_space_shape = env.observation_space.shape
