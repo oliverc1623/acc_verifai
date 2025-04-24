@@ -133,6 +133,10 @@ behavior IDM_MOBIL(id, politeness=0.25, safe_braking_limit=1, switching_threshol
 	time_wanted = Range(0.1, 1.5)
 	delta = Range(2, 6)
 	lane_change_min_acc_gain = 1.0
+	print(f"IDM+MOBIL params: 	acc_factor={acc_factor}, \
+	deacc_factor={deacc_factor}, target_speed={target_speed}, \
+	distance_wanted={distance_wanted}, time_wanted={time_wanted}, \
+	delta={delta}, politeness={politeness}")
 
 	_lon_controller_follow, _lat_controller_follow = simulation().getLaneFollowingControllers(self)
 	_lon_controller_change, _lat_controller_change = simulation().getLaneChangingControllers(self)
@@ -217,7 +221,7 @@ ego_spawn_pt  = (100 @ -150)
 c1_spawn_pt = (100 @ -147)
 
 id = 0
-ego = new Car at ego_spawn_pt
+ego = new Car at ego_spawn_pt, with velocity (15, 5)
 
 id = 1
 c1 = new Car at c1_spawn_pt offset by (LEADCAR_TO_EGO, 0),
@@ -254,6 +258,9 @@ terminate when c1.metaDriveActor.crash_vehicle
 terminate when c2.metaDriveActor.crash_vehicle
 terminate when c3.metaDriveActor.crash_vehicle
 terminate when c4.metaDriveActor.crash_vehicle
+terminate when c5.metaDriveActor.crash_vehicle
+terminate when c6.metaDriveActor.crash_vehicle
+
 
 # terminate when (distance from c1 to c2) < 4.5
 # terminate when (distance from c2 to c3) < 4.5
