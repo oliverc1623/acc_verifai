@@ -212,11 +212,11 @@ behavior dummy_attacker():
 #PLACEMENT
 ego_spawn_pt  = (100 @ -146.5)
 
-num_vehicles_to_place = 0
+num_vehicles_to_place = 6
 lane_width = 3.5
 
 id = 0
-ego = new Car on ego_spawn_pt, with behavior dummy_attacker()
+ego = new Car on ego_spawn_pt
 
 victim_spawn_pt = (120 @ -150)
 
