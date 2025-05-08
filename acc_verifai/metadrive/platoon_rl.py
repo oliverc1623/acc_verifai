@@ -8,7 +8,7 @@ from scenic.gym import ScenicGymEnv
 from scenic.simulators.metadrive import MetaDriveSimulator
 from stable_baselines3 import SAC
 from stable_baselines3.common.utils import set_random_seed
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 
 
 # %%
@@ -41,8 +41,11 @@ def main() -> None:
     """Run RL training."""
     set_random_seed(0)
 
+    log_dir = "../../../../pvcvolume/generic-av-baseline"
+
     envs = [make_env() for i in range(8)]
     env = SubprocVecEnv(envs)
+    env = VecMonitor(env, log_dir)
     env.reset()
 
     model = SAC("MlpPolicy", env, verbose=1)
