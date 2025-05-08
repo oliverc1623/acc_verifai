@@ -18,15 +18,15 @@ def make_env() -> callable:
 
     def thunk() -> ScenicGymEnv:
         scenario = scenic.scenarioFromFile(
-            "idm.scenic",
+            "baseline-av.scenic",
             model="scenic.simulators.metadrive.model",
             mode2D=True,
         )
 
         env = ScenicGymEnv(
             scenario,
-            MetaDriveSimulator(timestep=0.05, sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=True, real_time=False),
-            observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(7, 5)),
+            MetaDriveSimulator(timestep=0.05, sumo_map=pathlib.Path("../maps/Town06.net.xml"), render=False, real_time=False),
+            observation_space=spaces.Box(low=-np.inf, high=np.inf, shape=(258,)),
             action_space=spaces.Box(low=-1, high=1, shape=(2,)),
             max_steps=700,
         )
@@ -48,7 +48,7 @@ def main() -> None:
     while 1:
         action = env.action_space.sample()
         obs, reward, done, truc, info = env.step(action)
-        print(done)
+        print(reward)
 
     env.close()
 
