@@ -122,7 +122,7 @@ behavior IDM_MOBIL(id, politeness=0.25):
 	# IDM params
 	acc_factor = 1.0
 	deacc_factor = Range(-3,-1)
-	target_speed = Range(20, 22.5)
+	target_speed = Range(10, 15)
 	distance_wanted = Range(1.0, 2.0)
 	time_wanted = Range(0.1, 1.5)
 	delta = Range(2, 6)
@@ -210,19 +210,19 @@ behavior dummy_attacker():
 		take SetThrottleAction(1.0), SetBrakeAction(0.0), SetSteerAction(0.0)
 
 #PLACEMENT
-ego_spawn_pt  = (100 @ -150)
+ego_spawn_pt  = (100 @ -146.5)
 
-num_vehicles_to_place = 6
+num_vehicles_to_place = 0
 lane_width = 3.5
 
 id = 0
-ego = new Car on ego_spawn_pt
+ego = new Car on ego_spawn_pt, with behavior dummy_attacker()
 
-victim_spawn_pt = (130 @ -150)
+victim_spawn_pt = (120 @ -150)
 
 victim_vehicles = []
 for i in range(num_vehicles_to_place):
-	victim_longitudinal_offset = VerifaiRange(0, 100)
+	victim_longitudinal_offset = VerifaiRange(0, 200)
 	c_i_spawn_pt = (victim_spawn_pt[0] + victim_longitudinal_offset) @ victim_spawn_pt[1]
 
 	lane_group = network.laneGroupAt(c_i_spawn_pt)
@@ -234,7 +234,7 @@ for i in range(num_vehicles_to_place):
 require always (distance from ego.position to c1.position) > 4.99
 terminate when ego.lane == None 
 '''
-terminate when (simulation().currentTime > TERMINATE_TIME)
+terminate when ego.position.x >= ego_spawn_pt[0] + 350
 terminate when ego.metaDriveActor.crash_vehicle
 terminate when ego._lane == None
 terminate when any(v.metaDriveActor.crash_vehicle for v in victim_vehicles)
